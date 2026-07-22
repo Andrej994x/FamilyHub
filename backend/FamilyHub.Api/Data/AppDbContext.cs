@@ -23,6 +23,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<ChildProfile> ChildProfiles => Set<ChildProfile>();
 
+    public DbSet<FamilyTask> FamilyTasks => Set<FamilyTask>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

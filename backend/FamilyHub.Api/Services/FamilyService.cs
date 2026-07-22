@@ -179,6 +179,12 @@ public class FamilyService : IFamilyService
             return Result.Failure(ErrorType.Validation, "The family owner cannot be removed.");
         }
 
+        // Unassign any tasks pointing at this member first — the assignee FK uses
+        // NoAction, so the member row cannot be deleted while it is still referenced.
+        await _db.FamilyTasks
+            .Where(t => t.AssignedToMemberId == target.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.AssignedToMemberId, (Guid?)null));
+
         _db.FamilyMembers.Remove(target);
         await _db.SaveChangesAsync();
 
