@@ -33,6 +33,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<PickupSchedule> PickupSchedules => Set<PickupSchedule>();
 
+    public DbSet<Notification> Notifications => Set<Notification>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

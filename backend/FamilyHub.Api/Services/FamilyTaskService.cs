@@ -3,6 +3,7 @@ using FamilyHub.Api.Data;
 using FamilyHub.Api.DTOs.Tasks;
 using FamilyHub.Api.Interfaces;
 using FamilyHub.Api.Models;
+using FamilyHub.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using TaskStatus = FamilyHub.Api.Models.Enums.TaskStatus;
 
@@ -11,10 +12,12 @@ namespace FamilyHub.Api.Services;
 public class FamilyTaskService : IFamilyTaskService
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
 
-    public FamilyTaskService(AppDbContext db)
+    public FamilyTaskService(AppDbContext db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<Result<TaskResponse>> CreateTaskAsync(string userId, Guid familyId, CreateTaskRequest request)
@@ -48,6 +51,8 @@ public class FamilyTaskService : IFamilyTaskService
 
         _db.FamilyTasks.Add(task);
         await _db.SaveChangesAsync();
+
+        await NotifyAssigneeAsync(userId, task.AssignedToMemberId, task.Id, task.Title);
 
         return Result<TaskResponse>.Success(ToResponse(task));
     }
@@ -139,6 +144,8 @@ public class FamilyTaskService : IFamilyTaskService
                 ErrorType.Validation, "The assigned member is not part of this family.");
         }
 
+        var previousAssignee = task.AssignedToMemberId;
+
         task.Title = request.Title.Trim();
         task.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         task.AssignedToMemberId = request.AssignedToMemberId;
@@ -146,6 +153,12 @@ public class FamilyTaskService : IFamilyTaskService
         task.Priority = request.Priority;
 
         await _db.SaveChangesAsync();
+
+        // Notify only when the task is (re)assigned to a different member.
+        if (task.AssignedToMemberId is not null && task.AssignedToMemberId != previousAssignee)
+        {
+            await NotifyAssigneeAsync(userId, task.AssignedToMemberId, task.Id, task.Title);
+        }
 
         return Result<TaskResponse>.Success(ToResponse(task));
     }
@@ -216,6 +229,32 @@ public class FamilyTaskService : IFamilyTaskService
 
     private Task<bool> IsMemberOfFamily(Guid memberId, Guid familyId) =>
         _db.FamilyMembers.AnyAsync(m => m.Id == memberId && m.FamilyId == familyId);
+
+    /// <summary>Notifies the assigned member's user, unless they assigned the task to themselves.</summary>
+    private async Task NotifyAssigneeAsync(string actorUserId, Guid? assignedMemberId, Guid taskId, string title)
+    {
+        if (assignedMemberId is not Guid memberId)
+        {
+            return;
+        }
+
+        var assigneeUserId = await _db.FamilyMembers
+            .Where(m => m.Id == memberId)
+            .Select(m => m.UserId)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrEmpty(assigneeUserId) || assigneeUserId == actorUserId)
+        {
+            return;
+        }
+
+        await _notifications.CreateAsync(
+            assigneeUserId,
+            "New task assigned",
+            $"You have been assigned the task \"{title}\".",
+            NotificationType.TaskAssigned,
+            taskId);
+    }
 
     private static TaskResponse ToResponse(FamilyTask t) =>
         new(t.Id, t.FamilyId, t.Title, t.Description, t.AssignedToMemberId, t.DueDate,

@@ -11,10 +11,12 @@ namespace FamilyHub.Api.Services;
 public class PickupScheduleService : IPickupScheduleService
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
 
-    public PickupScheduleService(AppDbContext db)
+    public PickupScheduleService(AppDbContext db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<Result<PickupResponse>> CreatePickupAsync(string userId, Guid familyId, CreatePickupRequest request)
@@ -53,6 +55,8 @@ public class PickupScheduleService : IPickupScheduleService
 
         _db.PickupSchedules.Add(pickup);
         await _db.SaveChangesAsync();
+
+        await NotifyAssignedMemberAsync(userId, pickup.AssignedMemberId, pickup.Id, pickup.Location);
 
         return Result<PickupResponse>.Success(ToResponse(pickup));
     }
@@ -114,6 +118,8 @@ public class PickupScheduleService : IPickupScheduleService
             return Result<PickupResponse>.Failure(ErrorType.Validation, referenceError);
         }
 
+        var previousAssignee = pickup.AssignedMemberId;
+
         pickup.ChildProfileId = request.ChildProfileId;
         pickup.AssignedMemberId = request.AssignedMemberId;
         pickup.PickupDateTime = request.PickupDateTime;
@@ -121,6 +127,12 @@ public class PickupScheduleService : IPickupScheduleService
         pickup.Notes = Clean(request.Notes);
 
         await _db.SaveChangesAsync();
+
+        // Notify only when the pickup is reassigned to a different member.
+        if (pickup.AssignedMemberId != previousAssignee)
+        {
+            await NotifyAssignedMemberAsync(userId, pickup.AssignedMemberId, pickup.Id, pickup.Location);
+        }
 
         return Result<PickupResponse>.Success(ToResponse(pickup));
     }
@@ -151,6 +163,17 @@ public class PickupScheduleService : IPickupScheduleService
         pickup.CompletedAt = request.Status == PickupStatus.Completed ? DateTimeOffset.UtcNow : null;
 
         await _db.SaveChangesAsync();
+
+        // Notify the pickup's creator when the assigned member rejects it.
+        if (request.Status == PickupStatus.CannotAttend && pickup.CreatedByUserId != userId)
+        {
+            await _notifications.CreateAsync(
+                pickup.CreatedByUserId,
+                "Pickup rejected",
+                $"The assigned member cannot attend the pickup at {pickup.Location}.",
+                NotificationType.PickupRejected,
+                pickup.Id);
+        }
 
         return Result<PickupResponse>.Success(ToResponse(pickup));
     }
@@ -194,6 +217,17 @@ public class PickupScheduleService : IPickupScheduleService
         pickup.CompletedAt = null;
 
         await _db.SaveChangesAsync();
+
+        // Notify the pickup's creator that another member took it over.
+        if (pickup.CreatedByUserId != userId)
+        {
+            await _notifications.CreateAsync(
+                pickup.CreatedByUserId,
+                "Pickup taken over",
+                $"Another member has taken over the pickup at {pickup.Location}.",
+                NotificationType.PickupTakenOver,
+                pickup.Id);
+        }
 
         return Result<PickupResponse>.Success(ToResponse(pickup));
     }
@@ -260,6 +294,27 @@ public class PickupScheduleService : IPickupScheduleService
 
     private Task<PickupSchedule?> GetPickupEntityAsync(Guid familyId, Guid pickupId) =>
         _db.PickupSchedules.FirstOrDefaultAsync(p => p.Id == pickupId && p.FamilyId == familyId);
+
+    /// <summary>Notifies the assigned member's user, unless they assigned the pickup to themselves.</summary>
+    private async Task NotifyAssignedMemberAsync(string actorUserId, Guid assignedMemberId, Guid pickupId, string location)
+    {
+        var assigneeUserId = await _db.FamilyMembers
+            .Where(m => m.Id == assignedMemberId)
+            .Select(m => m.UserId)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrEmpty(assigneeUserId) || assigneeUserId == actorUserId)
+        {
+            return;
+        }
+
+        await _notifications.CreateAsync(
+            assigneeUserId,
+            "Pickup assigned",
+            $"You have been assigned a pickup at {location}.",
+            NotificationType.PickupAssigned,
+            pickupId);
+    }
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -15,15 +15,18 @@ public class InvitationService : IInvitationService
     private readonly AppDbContext _db;
     private readonly InvitationSettings _settings;
     private readonly ILogger<InvitationService> _logger;
+    private readonly INotificationService _notifications;
 
     public InvitationService(
         AppDbContext db,
         IOptions<InvitationSettings> settings,
-        ILogger<InvitationService> logger)
+        ILogger<InvitationService> logger,
+        INotificationService notifications)
     {
         _db = db;
         _settings = settings.Value;
         _logger = logger;
+        _notifications = notifications;
     }
 
     public async Task<Result<CreatedInvitationResponse>> CreateInvitationAsync(
@@ -162,6 +165,22 @@ public class InvitationService : IInvitationService
 
         invitation.Status = InvitationStatus.Accepted;
         await _db.SaveChangesAsync();
+
+        // Notify the family owner that the invitation was accepted.
+        var ownerUserId = await _db.Families
+            .Where(f => f.Id == invitation.FamilyId)
+            .Select(f => f.CreatedByUserId)
+            .FirstOrDefaultAsync();
+
+        if (!string.IsNullOrEmpty(ownerUserId) && ownerUserId != userId)
+        {
+            await _notifications.CreateAsync(
+                ownerUserId,
+                "Invitation accepted",
+                $"{invitation.Email} has joined your family.",
+                NotificationType.InvitationAccepted,
+                invitation.FamilyId);
+        }
 
         return Result<InvitationResponse>.Success(ToResponse(invitation));
     }
