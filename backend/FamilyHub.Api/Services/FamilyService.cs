@@ -189,6 +189,12 @@ public class FamilyService : IFamilyService
             .Where(e => e.AssignedMemberId == target.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.AssignedMemberId, (Guid?)null));
 
+        // Pickups require an assigned member (non-nullable FK, NoAction), so remove any
+        // pickups assigned to this member before deleting them.
+        await _db.PickupSchedules
+            .Where(p => p.AssignedMemberId == target.Id)
+            .ExecuteDeleteAsync();
+
         _db.FamilyMembers.Remove(target);
         await _db.SaveChangesAsync();
 

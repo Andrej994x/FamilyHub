@@ -97,6 +97,7 @@ try
     builder.Services.AddScoped<IFamilyTaskService, FamilyTaskService>();
     builder.Services.AddScoped<IFamilyEventService, FamilyEventService>();
     builder.Services.AddScoped<IShoppingListService, ShoppingListService>();
+    builder.Services.AddScoped<IPickupScheduleService, PickupScheduleService>();
 
     // --- CORS for the React development server ---
     var allowedOrigins = builder.Configuration

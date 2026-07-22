@@ -125,6 +125,12 @@ public class ChildProfileService : IChildProfileService
             .Where(e => e.ChildProfileId == child.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.ChildProfileId, (Guid?)null));
 
+        // Pickups require a child (non-nullable FK, NoAction), so remove any pickups
+        // for this child before deleting it.
+        await _db.PickupSchedules
+            .Where(p => p.ChildProfileId == child.Id)
+            .ExecuteDeleteAsync();
+
         _db.ChildProfiles.Remove(child);
         await _db.SaveChangesAsync();
 

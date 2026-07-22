@@ -31,6 +31,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<ShoppingItem> ShoppingItems => Set<ShoppingItem>();
 
+    public DbSet<PickupSchedule> PickupSchedules => Set<PickupSchedule>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
