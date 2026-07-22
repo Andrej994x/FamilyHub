@@ -95,6 +95,7 @@ try
     builder.Services.AddScoped<IInvitationService, InvitationService>();
     builder.Services.AddScoped<IChildProfileService, ChildProfileService>();
     builder.Services.AddScoped<IFamilyTaskService, FamilyTaskService>();
+    builder.Services.AddScoped<IFamilyEventService, FamilyEventService>();
 
     // --- CORS for the React development server ---
     var allowedOrigins = builder.Configuration

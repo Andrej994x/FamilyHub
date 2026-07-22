@@ -119,6 +119,12 @@ public class ChildProfileService : IChildProfileService
             return Result.Failure(ErrorType.NotFound, "Child profile not found in this family.");
         }
 
+        // Clear this child from any events first — the event FK uses NoAction, so the
+        // child row cannot be deleted while it is still referenced.
+        await _db.FamilyEvents
+            .Where(e => e.ChildProfileId == child.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.ChildProfileId, (Guid?)null));
+
         _db.ChildProfiles.Remove(child);
         await _db.SaveChangesAsync();
 

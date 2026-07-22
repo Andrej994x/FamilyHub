@@ -25,6 +25,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<FamilyTask> FamilyTasks => Set<FamilyTask>();
 
+    public DbSet<FamilyEvent> FamilyEvents => Set<FamilyEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
