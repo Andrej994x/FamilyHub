@@ -22,6 +22,11 @@ export { PickupStatus } from './pickups';
 export type { PickupResponse } from './pickups';
 
 export { ItemCategory } from './shopping';
-export type { ShoppingItemResponse, ShoppingListResponse } from './shopping';
+export type {
+  ShoppingItemResponse,
+  ShoppingListResponse,
+  ShoppingListRequest,
+  ShoppingItemRequest,
+} from './shopping';
 
 export type { NotificationResponse, UnreadCountResponse } from './notifications';

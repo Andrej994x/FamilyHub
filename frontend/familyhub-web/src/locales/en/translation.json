@@ -156,6 +156,34 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "shopping": {
+    "newList": "New list",
+    "noLists": "No shopping lists yet.",
+    "createFirstList": "Create your first list",
+    "emptyList": "This list is empty. Add your first item below.",
+    "addItem": "Add item",
+    "addItemPlaceholder": "Add an item…",
+    "markPurchased": "Mark as purchased",
+    "markNotPurchased": "Mark as not purchased",
+    "purchased": "Purchased ({{count}})",
+    "clearPurchased": "Clear purchased",
+    "clearPurchasedConfirm": "Remove all purchased items from this list?",
+    "dialog": {
+      "addListTitle": "New shopping list",
+      "listName": "List name",
+      "listNamePlaceholder": "e.g. Weekly groceries",
+      "createList": "Create list",
+      "category": "Category"
+    },
+    "errors": {
+      "loadFailed": "Could not load shopping lists.",
+      "createListFailed": "Could not create the list.",
+      "addItemFailed": "Could not add the item.",
+      "updateItemFailed": "Could not update the item.",
+      "deleteItemFailed": "Could not delete the item.",
+      "clearPurchasedFailed": "Could not clear purchased items."
+    }
+  },
   "calendar": {
     "add": "Add event",
     "today": "Today",
@@ -280,6 +308,13 @@
       "inProgress": "In progress",
       "completed": "Completed",
       "cancelled": "Cancelled"
+    },
+    "itemCategory": {
+      "grocery": "Grocery",
+      "pharmacy": "Pharmacy",
+      "home": "Home",
+      "child": "Child",
+      "other": "Other"
     }
   },
   "pages": {

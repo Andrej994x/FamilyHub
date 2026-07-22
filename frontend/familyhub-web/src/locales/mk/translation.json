@@ -156,6 +156,34 @@
       "deleteFailed": "Не успеа бришењето на профилот."
     }
   },
+  "shopping": {
+    "newList": "Нов список",
+    "noLists": "Сè уште нема списоци за купување.",
+    "createFirstList": "Креирајте го вашиот прв список",
+    "emptyList": "Овој список е празен. Додајте го првиот артикл подолу.",
+    "addItem": "Додај артикл",
+    "addItemPlaceholder": "Додај артикл…",
+    "markPurchased": "Означи како купено",
+    "markNotPurchased": "Означи како некупено",
+    "purchased": "Купено ({{count}})",
+    "clearPurchased": "Исчисти купено",
+    "clearPurchasedConfirm": "Да се отстранат сите купени артикли од овој список?",
+    "dialog": {
+      "addListTitle": "Нов список за купување",
+      "listName": "Име на список",
+      "listNamePlaceholder": "на пр. Неделна набавка",
+      "createList": "Креирај список",
+      "category": "Категорија"
+    },
+    "errors": {
+      "loadFailed": "Не успеа вчитувањето на списоците за купување.",
+      "createListFailed": "Не успеа креирањето на списокот.",
+      "addItemFailed": "Не успеа додавањето на артиклот.",
+      "updateItemFailed": "Не успеа ажурирањето на артиклот.",
+      "deleteItemFailed": "Не успеа бришењето на артиклот.",
+      "clearPurchasedFailed": "Не успеа чистењето на купените артикли."
+    }
+  },
   "calendar": {
     "add": "Додај настан",
     "today": "Денес",
@@ -280,6 +308,13 @@
       "inProgress": "Во тек",
       "completed": "Завршена",
       "cancelled": "Откажана"
+    },
+    "itemCategory": {
+      "grocery": "Намирници",
+      "pharmacy": "Аптека",
+      "home": "Дом",
+      "child": "Деца",
+      "other": "Друго"
     }
   },
   "pages": {

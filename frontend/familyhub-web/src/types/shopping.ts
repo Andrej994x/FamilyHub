@@ -26,3 +26,13 @@ export interface ShoppingListResponse {
   createdAt: string;
   items: ShoppingItemResponse[];
 }
+
+export interface ShoppingListRequest {
+  name: string;
+}
+
+export interface ShoppingItemRequest {
+  name: string;
+  quantity: string | null;
+  category: number;
+}

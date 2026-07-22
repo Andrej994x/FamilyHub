@@ -24,6 +24,18 @@ const TASK_STATUS_KEYS = [
   'enums.taskStatus.cancelled',
 ];
 
+const ITEM_CATEGORY_KEYS = [
+  'enums.itemCategory.grocery',
+  'enums.itemCategory.pharmacy',
+  'enums.itemCategory.home',
+  'enums.itemCategory.child',
+  'enums.itemCategory.other',
+];
+
+export function itemCategoryKey(category: number): string {
+  return ITEM_CATEGORY_KEYS[category] ?? 'enums.itemCategory.other';
+}
+
 export function eventTypeKey(type: number): string {
   return EVENT_TYPE_KEYS[type] ?? 'enums.eventType.other';
 }
