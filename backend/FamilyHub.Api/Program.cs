@@ -157,6 +157,9 @@ try
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+
+        // Development-only: apply migrations and populate sample data (no-op if already seeded).
+        await DbSeeder.SeedAsync(app.Services);
     }
 
     app.UseHttpsRedirection();
