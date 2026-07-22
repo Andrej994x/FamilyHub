@@ -156,6 +156,56 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "dashboard": {
+    "greeting": "Hello, {{name}}",
+    "loadError": "Could not load your dashboard.",
+    "quick": {
+      "addEvent": "Add event",
+      "addTask": "Add task",
+      "addShopping": "Add shopping item",
+      "addPickup": "Add pickup"
+    },
+    "stats": {
+      "notifications": "Unread notifications",
+      "notificationsHint": "New updates for you",
+      "shopping": "Items to buy"
+    },
+    "shopping": {
+      "summary": "{{items}} left across {{lists}} lists"
+    },
+    "sections": {
+      "events": "Today's events",
+      "tasks": "Today's tasks",
+      "pickups": "Today's pickups"
+    },
+    "empty": {
+      "events": "No events today.",
+      "tasks": "No pending tasks for today.",
+      "pickups": "No pickups today."
+    }
+  },
+  "enums": {
+    "eventType": {
+      "kindergarten": "Kindergarten",
+      "school": "School",
+      "doctor": "Doctor",
+      "training": "Training",
+      "birthday": "Birthday",
+      "family": "Family",
+      "other": "Other"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "pickupStatus": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cannotAttend": "Can't attend",
+      "completed": "Completed"
+    }
+  },
   "pages": {
     "dashboard": { "subtitle": "An overview of your family's day." },
     "calendar": { "subtitle": "Events, appointments and reminders." },

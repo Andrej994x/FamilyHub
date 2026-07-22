@@ -156,6 +156,56 @@
       "deleteFailed": "Не успеа бришењето на профилот."
     }
   },
+  "dashboard": {
+    "greeting": "Здраво, {{name}}",
+    "loadError": "Не успеа вчитувањето на контролната табла.",
+    "quick": {
+      "addEvent": "Додај настан",
+      "addTask": "Додај задача",
+      "addShopping": "Додај артикл",
+      "addPickup": "Додај подигнување"
+    },
+    "stats": {
+      "notifications": "Непрочитани известувања",
+      "notificationsHint": "Нови новости за вас",
+      "shopping": "Артикли за купување"
+    },
+    "shopping": {
+      "summary": "{{items}} преостанати во {{lists}} списоци"
+    },
+    "sections": {
+      "events": "Денешни настани",
+      "tasks": "Денешни задачи",
+      "pickups": "Денешни подигнувања"
+    },
+    "empty": {
+      "events": "Нема настани денес.",
+      "tasks": "Нема задачи во тек за денес.",
+      "pickups": "Нема подигнувања денес."
+    }
+  },
+  "enums": {
+    "eventType": {
+      "kindergarten": "Градинка",
+      "school": "Училиште",
+      "doctor": "Доктор",
+      "training": "Тренинг",
+      "birthday": "Роденден",
+      "family": "Семејство",
+      "other": "Друго"
+    },
+    "priority": {
+      "low": "Низок",
+      "medium": "Среден",
+      "high": "Висок"
+    },
+    "pickupStatus": {
+      "pending": "Во тек",
+      "confirmed": "Потврдено",
+      "cannotAttend": "Не може да присуствува",
+      "completed": "Завршено"
+    }
+  },
   "pages": {
     "dashboard": { "subtitle": "Преглед на денот на вашето семејство." },
     "calendar": { "subtitle": "Настани, термини и потсетници." },
