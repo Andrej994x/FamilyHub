@@ -89,6 +89,7 @@ try
     // --- Application services ---
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IFamilyService, FamilyService>();
 
     // --- CORS for the React development server ---
     var allowedOrigins = builder.Configuration
