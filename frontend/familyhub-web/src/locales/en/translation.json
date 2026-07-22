@@ -44,6 +44,10 @@
       "toRegister": "Create one",
       "toLogin": "Sign in"
     },
+    "a11y": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
     "errors": {
       "required": "This field is required.",
       "emailInvalid": "Enter a valid email address.",

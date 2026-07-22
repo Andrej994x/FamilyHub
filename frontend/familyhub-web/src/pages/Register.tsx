@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { PasswordInput } from '../components/PasswordInput';
+import { getApiErrorMessage } from '../utils/apiError';
 import type { RegisterRequest } from '../types';
 
 export default function Register() {
@@ -22,8 +24,8 @@ export default function Register() {
     try {
       await registerUser(values);
       navigate('/dashboard', { replace: true });
-    } catch {
-      setServerError(t('auth.errors.registerFailed'));
+    } catch (error) {
+      setServerError(getApiErrorMessage(error, t('auth.errors.registerFailed')));
     }
   };
 
@@ -88,10 +90,8 @@ export default function Register() {
           <label className="mb-1 block text-sm font-medium text-gray-700">
             {t('auth.fields.password')}
           </label>
-          <input
-            type="password"
+          <PasswordInput
             autoComplete="new-password"
-            className={inputClass}
             {...register('password', {
               required: t('auth.errors.required'),
               minLength: { value: 8, message: t('auth.errors.passwordMin') },

@@ -44,6 +44,10 @@
       "toRegister": "Креирајте",
       "toLogin": "Најавете се"
     },
+    "a11y": {
+      "showPassword": "Прикажи лозинка",
+      "hidePassword": "Сокриј лозинка"
+    },
     "errors": {
       "required": "Ова поле е задолжително.",
       "emailInvalid": "Внесете валидна е-пошта.",

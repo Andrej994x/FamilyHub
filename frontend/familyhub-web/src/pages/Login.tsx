@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { PasswordInput } from '../components/PasswordInput';
+import { getApiErrorMessage } from '../utils/apiError';
 import type { LoginRequest } from '../types';
 
 export default function Login() {
@@ -22,8 +24,8 @@ export default function Login() {
     try {
       await login(values);
       navigate('/dashboard', { replace: true });
-    } catch {
-      setServerError(t('auth.errors.invalidCredentials'));
+    } catch (error) {
+      setServerError(getApiErrorMessage(error, t('auth.errors.invalidCredentials')));
     }
   };
 
@@ -53,10 +55,8 @@ export default function Login() {
           <label className="mb-1 block text-sm font-medium text-gray-700">
             {t('auth.fields.password')}
           </label>
-          <input
-            type="password"
+          <PasswordInput
             autoComplete="current-password"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             {...register('password', { required: t('auth.errors.required') })}
           />
           {errors.password && (
