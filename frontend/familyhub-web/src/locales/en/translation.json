@@ -13,10 +13,27 @@
   },
   "common": {
     "loading": "Loading…",
+    "saving": "Saving…",
     "comingSoon": "This section is coming soon.",
     "logout": "Log out",
     "language": "Language",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "remove": "Remove",
+    "optional": "optional",
+    "you": "You"
+  },
+  "roles": {
+    "owner": "Owner",
+    "parent": "Parent",
+    "member": "Member",
+    "child": "Child"
   },
   "auth": {
     "login": {
@@ -57,12 +74,93 @@
       "generic": "Something went wrong. Please try again."
     }
   },
+  "onboarding": {
+    "title": "Welcome to FamilyHub",
+    "subtitle": "Create a family or join one with an invitation to get started.",
+    "create": {
+      "title": "Create a family",
+      "subtitle": "Start a new family and invite others later.",
+      "nameLabel": "Family name",
+      "namePlaceholder": "e.g. The Smiths",
+      "submit": "Create family"
+    },
+    "join": {
+      "title": "Join with an invitation",
+      "subtitle": "Paste the invitation token you received.",
+      "tokenLabel": "Invitation token",
+      "tokenPlaceholder": "Paste token here",
+      "submit": "Join family"
+    },
+    "errors": {
+      "createFailed": "Could not create the family.",
+      "joinFailed": "Could not join. Check the token and try again."
+    }
+  },
+  "family": {
+    "loadError": "Could not load the family.",
+    "createdOn": "Created {{date}}",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "members": {
+      "title": "Members",
+      "removeConfirm": "Remove this member from the family?"
+    }
+  },
+  "invitations": {
+    "title": "Invitations",
+    "invite": "Invite member",
+    "empty": "No invitations yet.",
+    "expires": "Expires {{date}}",
+    "cancelConfirm": "Cancel this invitation?",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "dialog": {
+      "title": "Invite a member",
+      "email": "Email",
+      "role": "Role",
+      "submit": "Send invitation",
+      "successTitle": "Invitation created",
+      "successHint": "Share this link or token with the person you invited.",
+      "link": "Invitation link",
+      "token": "Token",
+      "done": "Done"
+    },
+    "errors": {
+      "createFailed": "Could not create the invitation."
+    }
+  },
+  "children": {
+    "title": "Children",
+    "subtitle": "Profiles for the children in your family.",
+    "add": "Add child",
+    "empty": "No child profiles yet.",
+    "born": "Born {{date}}",
+    "deleteConfirm": "Delete this child profile?",
+    "notesWarning": "Do not store medical or other sensitive data here.",
+    "dialog": {
+      "addTitle": "Add child",
+      "editTitle": "Edit child",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "dob": "Date of birth",
+      "notes": "Notes",
+      "submit": "Save"
+    },
+    "errors": {
+      "loadFailed": "Could not load child profiles.",
+      "saveFailed": "Could not save the child profile.",
+      "deleteFailed": "Could not delete the child profile."
+    }
+  },
   "pages": {
     "dashboard": { "subtitle": "An overview of your family's day." },
     "calendar": { "subtitle": "Events, appointments and reminders." },
     "tasks": { "subtitle": "Shared to-dos for the whole family." },
     "shopping": { "subtitle": "Shared shopping lists." },
-    "family": { "subtitle": "Members, roles and invitations." },
     "pickups": { "subtitle": "Who picks up the kids, and when." }
   }
 }
