@@ -156,6 +156,12 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Updates and reminders for you.",
+    "empty": "You're all caught up.",
+    "markAllRead": "Mark all read"
+  },
   "pickups": {
     "add": "Add pickup",
     "empty": "No pickups scheduled.",

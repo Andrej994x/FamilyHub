@@ -32,6 +32,18 @@ export function formatTime(value: string, locale: string): string {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Time only for today, otherwise a short date — used for compact timestamps. */
+export function formatTimestampShort(value: string, locale: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  if (isToday(value)) {
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  }
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+}
+
 export function formatTodayLong(locale: string): string {
   return new Date().toLocaleDateString(locale, {
     weekday: 'long',

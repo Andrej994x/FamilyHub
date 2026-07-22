@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { NotificationBell } from './NotificationBell';
 
 export function Header() {
   const { t } = useTranslation();
@@ -19,7 +20,8 @@ export function Header() {
         {user ? `${t('common.welcome')}, ${user.firstName}` : ''}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
+        <NotificationBell />
         <LanguageSwitcher />
         <button
           type="button"

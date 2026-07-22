@@ -36,6 +36,21 @@ export function itemCategoryKey(category: number): string {
   return ITEM_CATEGORY_KEYS[category] ?? 'enums.itemCategory.other';
 }
 
+// NotificationType: 0 TaskAssigned, 1 PickupAssigned, 2 PickupRejected,
+// 3 PickupTakenOver, 4 InvitationAccepted.
+const NOTIFICATION_ROUTES: Record<number, string> = {
+  0: '/tasks',
+  1: '/pickups',
+  2: '/pickups',
+  3: '/pickups',
+  4: '/family',
+};
+
+/** The in-app route a notification links to, or null when it has no destination. */
+export function notificationRoute(type: number): string | null {
+  return NOTIFICATION_ROUTES[type] ?? null;
+}
+
 export function eventTypeKey(type: number): string {
   return EVENT_TYPE_KEYS[type] ?? 'enums.eventType.other';
 }

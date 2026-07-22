@@ -11,4 +11,12 @@ export const notificationService = {
     const { data } = await apiClient.get<UnreadCountResponse>('/notifications/unread-count');
     return data.unreadCount;
   },
+
+  async markAsRead(notificationId: string): Promise<void> {
+    await apiClient.patch(`/notifications/${notificationId}/read`);
+  },
+
+  async markAllAsRead(): Promise<void> {
+    await apiClient.patch('/notifications/read-all');
+  },
 };
