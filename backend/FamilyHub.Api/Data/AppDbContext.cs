@@ -15,6 +15,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
+    public DbSet<Family> Families => Set<Family>();
+
+    public DbSet<FamilyMember> FamilyMembers => Set<FamilyMember>();
+
+    public DbSet<FamilyInvitation> FamilyInvitations => Set<FamilyInvitation>();
+
+    public DbSet<ChildProfile> ChildProfiles => Set<ChildProfile>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
