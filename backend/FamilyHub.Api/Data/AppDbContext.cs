@@ -27,6 +27,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<FamilyEvent> FamilyEvents => Set<FamilyEvent>();
 
+    public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
+
+    public DbSet<ShoppingItem> ShoppingItems => Set<ShoppingItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
