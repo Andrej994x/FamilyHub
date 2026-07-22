@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "FamilyHub",
+    "tagline": "Everything your family needs, in one place."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "tasks": "Tasks",
+    "shopping": "Shopping",
+    "family": "Family",
+    "pickups": "Pickups"
+  },
+  "common": {
+    "loading": "Loading…",
+    "comingSoon": "This section is coming soon.",
+    "logout": "Log out",
+    "language": "Language",
+    "welcome": "Welcome"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back. Sign in to your account."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Set up your FamilyHub account."
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "password": "Password"
+    },
+    "buttons": {
+      "signIn": "Sign in",
+      "signUp": "Sign up",
+      "submitting": "Please wait…"
+    },
+    "links": {
+      "noAccount": "Don't have an account?",
+      "haveAccount": "Already have an account?",
+      "toRegister": "Create one",
+      "toLogin": "Sign in"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordMin": "Password must be at least 8 characters.",
+      "invalidCredentials": "Invalid email or password.",
+      "registerFailed": "Registration failed. Please try again.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "pages": {
+    "dashboard": { "subtitle": "An overview of your family's day." },
+    "calendar": { "subtitle": "Events, appointments and reminders." },
+    "tasks": { "subtitle": "Shared to-dos for the whole family." },
+    "shopping": { "subtitle": "Shared shopping lists." },
+    "family": { "subtitle": "Members, roles and invitations." },
+    "pickups": { "subtitle": "Who picks up the kids, and when." }
+  }
+}
