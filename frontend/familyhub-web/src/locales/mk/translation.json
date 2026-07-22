@@ -156,6 +156,43 @@
       "deleteFailed": "Не успеа бришењето на профилот."
     }
   },
+  "tasks": {
+    "add": "Додај задача",
+    "empty": "Сè уште нема задачи.",
+    "emptyFiltered": "Нема задачи што одговараат на филтрите.",
+    "due": "Рок {{date}}",
+    "deleteConfirm": "Да се избрише оваа задача?",
+    "filters": {
+      "allStatuses": "Сите статуси",
+      "allMembers": "Сите членови",
+      "allPriorities": "Сите приоритети",
+      "unassigned": "Недоделено",
+      "clear": "Исчисти филтри"
+    },
+    "table": {
+      "task": "Задача",
+      "assignee": "Задолжен",
+      "dueDate": "Рок",
+      "priority": "Приоритет",
+      "status": "Статус",
+      "actions": "Дејства"
+    },
+    "dialog": {
+      "addTitle": "Додај задача",
+      "editTitle": "Измени задача",
+      "title": "Наслов",
+      "description": "Опис",
+      "assignee": "Додели на",
+      "dueDate": "Рок",
+      "priority": "Приоритет",
+      "submit": "Зачувај"
+    },
+    "errors": {
+      "loadFailed": "Не успеа вчитувањето на задачите.",
+      "saveFailed": "Не успеа зачувувањето на задачата.",
+      "deleteFailed": "Не успеа бришењето на задачата."
+    }
+  },
   "dashboard": {
     "greeting": "Здраво, {{name}}",
     "loadError": "Не успеа вчитувањето на контролната табла.",
@@ -204,6 +241,12 @@
       "confirmed": "Потврдено",
       "cannotAttend": "Не може да присуствува",
       "completed": "Завршено"
+    },
+    "taskStatus": {
+      "pending": "Чека",
+      "inProgress": "Во тек",
+      "completed": "Завршена",
+      "cancelled": "Откажана"
     }
   },
   "pages": {

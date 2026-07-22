@@ -32,3 +32,11 @@ export interface TaskFilter {
   dueTo?: string;
   priority?: number;
 }
+
+export interface TaskRequest {
+  title: string;
+  description: string | null;
+  assignedToMemberId: string | null;
+  dueDate: string | null;
+  priority: number;
+}

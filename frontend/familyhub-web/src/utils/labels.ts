@@ -17,6 +17,13 @@ const PICKUP_STATUS_KEYS = [
   'enums.pickupStatus.completed',
 ];
 
+const TASK_STATUS_KEYS = [
+  'enums.taskStatus.pending',
+  'enums.taskStatus.inProgress',
+  'enums.taskStatus.completed',
+  'enums.taskStatus.cancelled',
+];
+
 export function eventTypeKey(type: number): string {
   return EVENT_TYPE_KEYS[type] ?? 'enums.eventType.other';
 }
@@ -48,6 +55,23 @@ export function pickupStatusClasses(status: number): string {
       return 'bg-red-50 text-red-700';
     case 3:
       return 'bg-gray-100 text-gray-600';
+    default:
+      return 'bg-amber-50 text-amber-700';
+  }
+}
+
+export function taskStatusKey(status: number): string {
+  return TASK_STATUS_KEYS[status] ?? 'enums.taskStatus.pending';
+}
+
+export function taskStatusClasses(status: number): string {
+  switch (status) {
+    case 1:
+      return 'bg-blue-50 text-blue-700';
+    case 2:
+      return 'bg-green-50 text-green-700';
+    case 3:
+      return 'bg-gray-100 text-gray-500';
     default:
       return 'bg-amber-50 text-amber-700';
   }

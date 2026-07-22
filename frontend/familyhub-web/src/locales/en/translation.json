@@ -156,6 +156,43 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "tasks": {
+    "add": "Add task",
+    "empty": "No tasks yet.",
+    "emptyFiltered": "No tasks match these filters.",
+    "due": "Due {{date}}",
+    "deleteConfirm": "Delete this task?",
+    "filters": {
+      "allStatuses": "All statuses",
+      "allMembers": "All members",
+      "allPriorities": "All priorities",
+      "unassigned": "Unassigned",
+      "clear": "Clear filters"
+    },
+    "table": {
+      "task": "Task",
+      "assignee": "Assignee",
+      "dueDate": "Due date",
+      "priority": "Priority",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "addTitle": "Add task",
+      "editTitle": "Edit task",
+      "title": "Title",
+      "description": "Description",
+      "assignee": "Assign to",
+      "dueDate": "Due date",
+      "priority": "Priority",
+      "submit": "Save"
+    },
+    "errors": {
+      "loadFailed": "Could not load tasks.",
+      "saveFailed": "Could not save the task.",
+      "deleteFailed": "Could not delete the task."
+    }
+  },
   "dashboard": {
     "greeting": "Hello, {{name}}",
     "loadError": "Could not load your dashboard.",
@@ -204,6 +241,12 @@
       "confirmed": "Confirmed",
       "cannotAttend": "Can't attend",
       "completed": "Completed"
+    },
+    "taskStatus": {
+      "pending": "Pending",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
     }
   },
   "pages": {

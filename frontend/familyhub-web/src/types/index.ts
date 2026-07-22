@@ -16,7 +16,7 @@ export { EventType } from './events';
 export type { EventResponse, EventFilter } from './events';
 
 export { TaskPriority, TaskStatus } from './tasks';
-export type { TaskResponse, TaskFilter } from './tasks';
+export type { TaskResponse, TaskFilter, TaskRequest } from './tasks';
 
 export { PickupStatus } from './pickups';
 export type { PickupResponse } from './pickups';
