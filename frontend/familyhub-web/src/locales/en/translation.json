@@ -156,6 +156,39 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "calendar": {
+    "add": "Add event",
+    "today": "Today",
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "empty": "No events this week.",
+    "emptyFiltered": "No events match these filters.",
+    "deleteConfirm": "Delete this event?",
+    "until": "until {{time}}",
+    "filters": {
+      "clear": "Clear filters"
+    },
+    "dialog": {
+      "addTitle": "Add event",
+      "editTitle": "Edit event",
+      "title": "Title",
+      "type": "Type",
+      "start": "Starts",
+      "end": "Ends",
+      "location": "Location",
+      "assignee": "Assign to",
+      "child": "Child",
+      "noOne": "No one",
+      "noChild": "None",
+      "submit": "Save"
+    },
+    "errors": {
+      "loadFailed": "Could not load events.",
+      "saveFailed": "Could not save the event.",
+      "deleteFailed": "Could not delete the event.",
+      "endBeforeStart": "The end time must be after the start time."
+    }
+  },
   "tasks": {
     "add": "Add task",
     "empty": "No tasks yet.",

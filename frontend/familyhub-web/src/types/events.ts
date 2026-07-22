@@ -30,3 +30,14 @@ export interface EventFilter {
   childId?: string;
   eventType?: number;
 }
+
+export interface EventRequest {
+  title: string;
+  description: string | null;
+  eventType: number;
+  startDateTime: string;
+  endDateTime: string | null;
+  location: string | null;
+  assignedMemberId: string | null;
+  childProfileId: string | null;
+}

@@ -32,6 +32,21 @@ export function priorityKey(priority: number): string {
   return PRIORITY_KEYS[priority] ?? 'enums.priority.medium';
 }
 
+// Kindergarten, School, Doctor, Training, Birthday, Family, Other
+const EVENT_TYPE_CLASSES = [
+  'bg-sky-50 text-sky-700',
+  'bg-indigo-50 text-indigo-700',
+  'bg-red-50 text-red-700',
+  'bg-emerald-50 text-emerald-700',
+  'bg-pink-50 text-pink-700',
+  'bg-amber-50 text-amber-700',
+  'bg-gray-100 text-gray-600',
+];
+
+export function eventTypeClasses(type: number): string {
+  return EVENT_TYPE_CLASSES[type] ?? 'bg-gray-100 text-gray-600';
+}
+
 export function pickupStatusKey(status: number): string {
   return PICKUP_STATUS_KEYS[status] ?? 'enums.pickupStatus.pending';
 }

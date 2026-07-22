@@ -13,7 +13,7 @@ export type {
 } from './family';
 
 export { EventType } from './events';
-export type { EventResponse, EventFilter } from './events';
+export type { EventResponse, EventFilter, EventRequest } from './events';
 
 export { TaskPriority, TaskStatus } from './tasks';
 export type { TaskResponse, TaskFilter, TaskRequest } from './tasks';
