@@ -93,6 +93,7 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IFamilyService, FamilyService>();
     builder.Services.AddScoped<IInvitationService, InvitationService>();
+    builder.Services.AddScoped<IChildProfileService, ChildProfileService>();
 
     // --- CORS for the React development server ---
     var allowedOrigins = builder.Configuration
