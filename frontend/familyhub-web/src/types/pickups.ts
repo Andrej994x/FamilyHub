@@ -18,3 +18,11 @@ export interface PickupResponse {
   createdAt: string;
   completedAt: string | null;
 }
+
+export interface PickupRequest {
+  childProfileId: string;
+  assignedMemberId: string;
+  pickupDateTime: string;
+  location: string;
+  notes: string | null;
+}

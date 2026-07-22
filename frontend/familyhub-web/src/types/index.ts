@@ -19,7 +19,7 @@ export { TaskPriority, TaskStatus } from './tasks';
 export type { TaskResponse, TaskFilter, TaskRequest } from './tasks';
 
 export { PickupStatus } from './pickups';
-export type { PickupResponse } from './pickups';
+export type { PickupResponse, PickupRequest } from './pickups';
 
 export { ItemCategory } from './shopping';
 export type {

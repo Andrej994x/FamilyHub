@@ -156,6 +156,41 @@
       "deleteFailed": "Could not delete the child profile."
     }
   },
+  "pickups": {
+    "add": "Add pickup",
+    "empty": "No pickups scheduled.",
+    "deleteConfirm": "Delete this pickup?",
+    "assignedTo": "Assigned to {{name}}",
+    "unknownChild": "Unknown child",
+    "unknownMember": "Unassigned",
+    "actions": {
+      "confirm": "Confirm",
+      "complete": "Mark completed",
+      "cannotAttend": "Can't attend",
+      "takeOver": "Take over"
+    },
+    "dialog": {
+      "addTitle": "Add pickup",
+      "editTitle": "Edit pickup",
+      "child": "Child",
+      "selectChild": "Select a child",
+      "assignee": "Assign to",
+      "selectMember": "Select a member",
+      "dateTime": "Date & time",
+      "location": "Location",
+      "locationPlaceholder": "e.g. School gate",
+      "notes": "Notes",
+      "noChildrenHint": "Add a child profile in the Family section before scheduling a pickup.",
+      "submit": "Save"
+    },
+    "errors": {
+      "loadFailed": "Could not load pickups.",
+      "saveFailed": "Could not save the pickup.",
+      "statusFailed": "Could not update the pickup status.",
+      "takeOverFailed": "Could not take over the pickup.",
+      "deleteFailed": "Could not delete the pickup."
+    }
+  },
   "shopping": {
     "newList": "New list",
     "noLists": "No shopping lists yet.",
@@ -257,6 +292,7 @@
   "dashboard": {
     "greeting": "Hello, {{name}}",
     "loadError": "Could not load your dashboard.",
+    "viewAll": "View all",
     "quick": {
       "addEvent": "Add event",
       "addTask": "Add task",

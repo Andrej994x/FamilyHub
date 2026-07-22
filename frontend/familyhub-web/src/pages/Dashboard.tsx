@@ -7,6 +7,7 @@ import { eventService } from '../services/eventService';
 import { taskService } from '../services/taskService';
 import { pickupService } from '../services/pickupService';
 import { shoppingService } from '../services/shoppingService';
+import { childService } from '../services/childService';
 import { notificationService } from '../services/notificationService';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatTime, formatTodayLong, isToday, todayRange } from '../utils/date';
@@ -19,6 +20,7 @@ import {
 } from '../utils/labels';
 import { TaskStatus } from '../types';
 import type {
+  ChildResponse,
   EventResponse,
   PickupResponse,
   ShoppingListResponse,
@@ -33,6 +35,7 @@ interface DashboardData {
   events: EventResponse[];
   tasks: TaskResponse[];
   pickups: PickupResponse[];
+  children: ChildResponse[];
   lists: ShoppingListResponse[];
   unread: number;
 }
@@ -58,10 +61,11 @@ export default function Dashboard() {
     const { from, to } = todayRange();
 
     try {
-      const [events, tasks, pickups, lists, unread] = await Promise.all([
+      const [events, tasks, pickups, children, lists, unread] = await Promise.all([
         eventService.list(familyId, { dateFrom: from, dateTo: to }),
         taskService.list(familyId, { status: TaskStatus.Pending, dueFrom: from, dueTo: to }),
         pickupService.list(familyId),
+        childService.list(familyId),
         shoppingService.getLists(familyId),
         notificationService.getUnreadCount(),
       ]);
@@ -70,6 +74,7 @@ export default function Dashboard() {
         events,
         tasks,
         pickups: pickups.filter((pickup) => isToday(pickup.pickupDateTime)),
+        children,
         lists,
         unread,
       });
@@ -83,6 +88,14 @@ export default function Dashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const childName = useCallback(
+    (id: string): string => {
+      const child = (data?.children ?? []).find((c) => c.id === id);
+      return child ? `${child.firstName} ${child.lastName}` : t('pickups.unknownChild');
+    },
+    [data, t],
+  );
 
   const shoppingSummary = useMemo(() => {
     const lists = data?.lists ?? [];
@@ -188,7 +201,18 @@ export default function Dashboard() {
             </Card>
 
             {/* Today's pickups */}
-            <Card title={t('dashboard.sections.pickups')}>
+            <Card
+              title={t('dashboard.sections.pickups')}
+              action={
+                <button
+                  type="button"
+                  onClick={() => navigate('/pickups')}
+                  className="text-xs font-medium text-brand-600 hover:underline"
+                >
+                  {t('dashboard.viewAll')}
+                </button>
+              }
+            >
               {data && data.pickups.length > 0 ? (
                 <ul className="space-y-3">
                   {data.pickups.map((pickup) => (
@@ -198,8 +222,9 @@ export default function Dashboard() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-gray-900">
-                          {pickup.location}
+                          {childName(pickup.childProfileId)}
                         </p>
+                        <p className="truncate text-xs text-gray-400">{pickup.location}</p>
                         <span
                           className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${pickupStatusClasses(pickup.status)}`}
                         >
