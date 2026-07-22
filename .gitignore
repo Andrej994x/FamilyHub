@@ -1,0 +1,27 @@
+# ---- Node / frontend ----
+node_modules/
+frontend/**/dist/
+frontend/**/.vite/
+*.local
+
+# ---- .NET / backend ----
+bin/
+obj/
+*.user
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- IDE / OS ----
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Secrets / env ----
+.env
+.env.*
+appsettings.*.local.json
