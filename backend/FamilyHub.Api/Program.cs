@@ -116,9 +116,23 @@ try
     builder.Services.AddCors(options =>
     {
         options.AddPolicy(CorsPolicyName, policy =>
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod());
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                // Development: allow any origin so the app can be opened from a phone on the
+                // local network (e.g. http://192.168.x.x:5173). The API is stateless and uses
+                // bearer tokens (no cookies), so reflecting the origin is safe here.
+                policy.SetIsOriginAllowed(_ => true)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+            else
+            {
+                policy.WithOrigins(allowedOrigins)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+        });
     });
 
     // --- Swagger / OpenAPI (with JWT bearer support) ---

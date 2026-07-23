@@ -20,6 +20,59 @@ body,
   min-height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   @apply bg-gray-50 text-gray-900 antialiased;
+  /* Never allow the page itself to scroll sideways on mobile. */
+  overflow-x: hidden;
+  /* Avoid rubber-band scroll chaining into parent surfaces. */
+  overscroll-behavior-y: none;
+}
+
+/* Kill the grey flash on tap and remove the 300ms delay on touch. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role='button'],
+label,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* iOS zooms the page when focusing an input smaller than 16px. Keep mobile
+   form controls at 16px so focus never triggers an unwanted zoom. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Momentum scrolling + hidden scrollbars for horizontal strips (tabs, chips). */
+.no-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respect the device's safe areas (notch, home indicator). */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--safe-extra, 0px));
 }

@@ -200,7 +200,7 @@ export default function Shopping() {
       ) : (
         <>
           {/* List selector */}
-          <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1">
             {lists.map((list) => {
               const active = list.id === selectedListId;
               const count = activeCount(list);
@@ -295,7 +295,7 @@ export default function Shopping() {
               {/* Quick-add bar — pinned within thumb reach, above the mobile nav. */}
               <form
                 onSubmit={handleAddItem}
-                className="sticky bottom-20 z-10 flex gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg md:bottom-4"
+                className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg md:bottom-4"
               >
                 <input
                   type="text"

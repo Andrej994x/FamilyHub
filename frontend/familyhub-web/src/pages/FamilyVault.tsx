@@ -45,7 +45,7 @@ export default function FamilyVault() {
       </header>
 
       {/* Mobile-first category tabs (horizontally scrollable). */}
-      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+      <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
         {VAULT_CATEGORIES.map((category) => {
           const active = category.key === activeKey;
           return (

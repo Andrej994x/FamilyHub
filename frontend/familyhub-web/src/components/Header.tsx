@@ -22,14 +22,17 @@ export function Header() {
 
       <div className="flex items-center gap-2 md:gap-3">
         <NotificationBell />
-        <LanguageSwitcher />
-        <button
-          type="button"
-          onClick={logout}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-        >
-          {t('common.logout')}
-        </button>
+        {/* Language + logout live in the mobile "More" sheet; shown inline on desktop. */}
+        <div className="hidden items-center gap-3 md:flex">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            {t('common.logout')}
+          </button>
+        </div>
       </div>
     </header>
   );

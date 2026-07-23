@@ -10,7 +10,8 @@
     "shopping": "Shopping",
     "family": "Family",
     "pickups": "Pickups",
-    "vault": "Family Vault"
+    "vault": "Family Vault",
+    "more": "More"
   },
   "common": {
     "loading": "Loading…",
