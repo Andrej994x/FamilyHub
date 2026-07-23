@@ -99,6 +99,14 @@ try
     builder.Services.AddScoped<IShoppingListService, ShoppingListService>();
     builder.Services.AddScoped<IPickupScheduleService, PickupScheduleService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<IFamilyDocumentService, FamilyDocumentService>();
+    builder.Services.AddScoped<IVehicleService, VehicleService>();
+    builder.Services.AddScoped<IPetService, PetService>();
+    builder.Services.AddScoped<IHomeRecordService, HomeRecordService>();
+    builder.Services.AddScoped<IWarrantyService, WarrantyService>();
+    builder.Services.AddScoped<IOtherRecordService, OtherRecordService>();
+    builder.Services.AddScoped<IVaultAttachmentService, VaultAttachmentService>();
+    builder.Services.AddSingleton<IFamilyVaultStorage, FamilyVaultStorage>();
 
     // --- CORS for the React development server ---
     var allowedOrigins = builder.Configuration

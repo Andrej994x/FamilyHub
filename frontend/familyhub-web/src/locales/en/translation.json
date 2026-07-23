@@ -9,7 +9,8 @@
     "tasks": "Tasks",
     "shopping": "Shopping",
     "family": "Family",
-    "pickups": "Pickups"
+    "pickups": "Pickups",
+    "vault": "Family Vault"
   },
   "common": {
     "loading": "Loading…",
@@ -161,6 +162,105 @@
     "subtitle": "Updates and reminders for you.",
     "empty": "You're all caught up.",
     "markAllRead": "Mark all read"
+  },
+  "vault": {
+    "title": "Family Vault",
+    "subtitle": "Your family's important documents and records, in one place.",
+    "untitled": "Untitled",
+    "unknownSubject": "Unknown",
+    "empty": "No {{name}} yet.",
+    "tabs": {
+      "documents": "Documents",
+      "vehicles": "Vehicles",
+      "pets": "Pets",
+      "home": "Home",
+      "warranties": "Warranties",
+      "other": "Other"
+    },
+    "status": {
+      "valid": "Valid",
+      "expired": "Expired",
+      "today": "Due today",
+      "inDays": "in {{days}} days"
+    },
+    "actions": {
+      "add": "Add",
+      "save": "Save",
+      "deleteConfirm": "Delete this record? This also removes its attachments."
+    },
+    "form": {
+      "addTitle": "Add record",
+      "editTitle": "Edit record"
+    },
+    "fields": {
+      "belongsTo": "Belongs to",
+      "selectSubject": "Select a person",
+      "members": "Members",
+      "children": "Children",
+      "documentType": "Document type",
+      "documentNumber": "Document number",
+      "issueDate": "Issue date",
+      "expiryDate": "Expiry date",
+      "notes": "Notes",
+      "name": "Name",
+      "make": "Make",
+      "model": "Model",
+      "registrationNumber": "Registration number",
+      "registrationExpiry": "Registration expiry",
+      "insuranceExpiry": "Insurance expiry",
+      "nextServiceDate": "Next service date",
+      "nextServiceMileage": "Next service mileage",
+      "registration": "Registration",
+      "insurance": "Insurance",
+      "service": "Service",
+      "petType": "Type",
+      "breed": "Breed",
+      "dateOfBirth": "Date of birth",
+      "microchipNumber": "Microchip number",
+      "vaccinationName": "Vaccination",
+      "lastVaccinationDate": "Last vaccination",
+      "nextVaccinationDate": "Next vaccination",
+      "veterinarian": "Veterinarian",
+      "vaccination": "Vaccination",
+      "title": "Title",
+      "homeType": "Type",
+      "provider": "Provider",
+      "renewalDate": "Renewal / expiry date",
+      "renewal": "Renewal",
+      "productName": "Product name",
+      "store": "Store",
+      "purchaseDate": "Purchase date",
+      "warrantyExpiryDate": "Warranty expiry",
+      "serialNumber": "Serial number",
+      "warranty": "Warranty",
+      "description": "Description",
+      "importantDate": "Important date",
+      "attachment": "Attachment",
+      "attachments": "Attachments"
+    },
+    "documentTypes": {
+      "identityCard": "Identity card",
+      "passport": "Passport",
+      "drivingLicense": "Driving license",
+      "healthCard": "Health card",
+      "residencePermit": "Residence permit",
+      "studentDocument": "Student document"
+    },
+    "attachments": {
+      "view": "View",
+      "file": "File",
+      "none": "No attachments.",
+      "previewFailed": "Preview unavailable",
+      "uploadHint": "JPG, PNG or PDF, up to 5 MB.",
+      "removeCurrent": "Remove current attachment",
+      "deleteConfirm": "Remove this attachment?"
+    },
+    "errors": {
+      "loadFailed": "Could not load records.",
+      "saveFailed": "Could not save the record.",
+      "deleteFailed": "Could not delete.",
+      "requiredMissing": "Please fill in the required fields."
+    }
   },
   "pickups": {
     "add": "Add pickup",

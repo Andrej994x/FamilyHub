@@ -195,6 +195,11 @@ public class FamilyService : IFamilyService
             .Where(p => p.AssignedMemberId == target.Id)
             .ExecuteDeleteAsync();
 
+        // Vault documents for this member (FamilyMemberId FK, NoAction) must go too.
+        await _db.FamilyDocuments
+            .Where(d => d.FamilyMemberId == target.Id)
+            .ExecuteDeleteAsync();
+
         _db.FamilyMembers.Remove(target);
         await _db.SaveChangesAsync();
 

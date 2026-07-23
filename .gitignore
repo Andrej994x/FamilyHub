@@ -13,6 +13,9 @@ obj/
 logs/
 *.log
 
+# ---- Uploaded files (Family Vault attachments) ----
+backend/**/uploads/
+
 # ---- IDE / OS ----
 .vs/
 .vscode/*

@@ -14,6 +14,7 @@ import Shopping from '../pages/Shopping';
 import FamilyMembersPage from '../pages/FamilyMembersPage';
 import Pickups from '../pages/Pickups';
 import Notifications from '../pages/Notifications';
+import FamilyVault from '../pages/FamilyVault';
 
 export function AppRoutes() {
   return (
@@ -39,6 +40,7 @@ export function AppRoutes() {
               <Route path="/shopping" element={<Shopping />} />
               <Route path="/family" element={<FamilyMembersPage />} />
               <Route path="/pickups" element={<Pickups />} />
+              <Route path="/vault" element={<FamilyVault />} />
               <Route path="/notifications" element={<Notifications />} />
             </Route>
           </Route>

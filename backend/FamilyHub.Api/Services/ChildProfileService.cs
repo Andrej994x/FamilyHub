@@ -131,6 +131,11 @@ public class ChildProfileService : IChildProfileService
             .Where(p => p.ChildProfileId == child.Id)
             .ExecuteDeleteAsync();
 
+        // Vault documents for this child (ChildProfileId FK, NoAction) must go too.
+        await _db.FamilyDocuments
+            .Where(d => d.ChildProfileId == child.Id)
+            .ExecuteDeleteAsync();
+
         _db.ChildProfiles.Remove(child);
         await _db.SaveChangesAsync();
 

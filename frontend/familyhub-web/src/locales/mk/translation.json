@@ -9,7 +9,8 @@
     "tasks": "Задачи",
     "shopping": "Купување",
     "family": "Семејство",
-    "pickups": "Подигнувања"
+    "pickups": "Подигнувања",
+    "vault": "Семеен сеф"
   },
   "common": {
     "loading": "Се вчитува…",
@@ -161,6 +162,105 @@
     "subtitle": "Новости и потсетници за вас.",
     "empty": "Нема нови известувања.",
     "markAllRead": "Означи ги сите како прочитани"
+  },
+  "vault": {
+    "title": "Семеен сеф",
+    "subtitle": "Важните документи и записи на вашето семејство, на едно место.",
+    "untitled": "Без наслов",
+    "unknownSubject": "Непознато",
+    "empty": "Сè уште нема записи во {{name}}.",
+    "tabs": {
+      "documents": "Документи",
+      "vehicles": "Возила",
+      "pets": "Миленици",
+      "home": "Дом",
+      "warranties": "Гаранции",
+      "other": "Друго"
+    },
+    "status": {
+      "valid": "Важечки",
+      "expired": "Истечен",
+      "today": "Истекува денес",
+      "inDays": "за {{days}} дена"
+    },
+    "actions": {
+      "add": "Додај",
+      "save": "Зачувај",
+      "deleteConfirm": "Да се избрише овој запис? Ова ги отстранува и прилозите."
+    },
+    "form": {
+      "addTitle": "Додај запис",
+      "editTitle": "Измени запис"
+    },
+    "fields": {
+      "belongsTo": "Припаѓа на",
+      "selectSubject": "Изберете лице",
+      "members": "Членови",
+      "children": "Деца",
+      "documentType": "Тип на документ",
+      "documentNumber": "Број на документ",
+      "issueDate": "Датум на издавање",
+      "expiryDate": "Датум на истекување",
+      "notes": "Белешки",
+      "name": "Име",
+      "make": "Марка",
+      "model": "Модел",
+      "registrationNumber": "Регистарски број",
+      "registrationExpiry": "Истек на регистрација",
+      "insuranceExpiry": "Истек на осигурување",
+      "nextServiceDate": "Следен сервис",
+      "nextServiceMileage": "Километража за сервис",
+      "registration": "Регистрација",
+      "insurance": "Осигурување",
+      "service": "Сервис",
+      "petType": "Вид",
+      "breed": "Раса",
+      "dateOfBirth": "Датум на раѓање",
+      "microchipNumber": "Број на микрочип",
+      "vaccinationName": "Вакцина",
+      "lastVaccinationDate": "Последна вакцина",
+      "nextVaccinationDate": "Следна вакцина",
+      "veterinarian": "Ветеринар",
+      "vaccination": "Вакцина",
+      "title": "Наслов",
+      "homeType": "Тип",
+      "provider": "Провајдер",
+      "renewalDate": "Датум на обнова / истек",
+      "renewal": "Обнова",
+      "productName": "Име на производ",
+      "store": "Продавница",
+      "purchaseDate": "Датум на купување",
+      "warrantyExpiryDate": "Истек на гаранција",
+      "serialNumber": "Сериски број",
+      "warranty": "Гаранција",
+      "description": "Опис",
+      "importantDate": "Важен датум",
+      "attachment": "Прилог",
+      "attachments": "Прилози"
+    },
+    "documentTypes": {
+      "identityCard": "Лична карта",
+      "passport": "Пасош",
+      "drivingLicense": "Возачка дозвола",
+      "healthCard": "Здравствена картичка",
+      "residencePermit": "Дозвола за престој",
+      "studentDocument": "Студентски документ"
+    },
+    "attachments": {
+      "view": "Прегледај",
+      "file": "Датотека",
+      "none": "Нема прилози.",
+      "previewFailed": "Прегледот е недостапен",
+      "uploadHint": "JPG, PNG или PDF, до 5 MB.",
+      "removeCurrent": "Отстрани го тековниот прилог",
+      "deleteConfirm": "Да се отстрани овој прилог?"
+    },
+    "errors": {
+      "loadFailed": "Не успеа вчитувањето на записите.",
+      "saveFailed": "Не успеа зачувувањето на записот.",
+      "deleteFailed": "Не успеа бришењето.",
+      "requiredMissing": "Пополнете ги задолжителните полиња."
+    }
   },
   "pickups": {
     "add": "Додај подигнување",

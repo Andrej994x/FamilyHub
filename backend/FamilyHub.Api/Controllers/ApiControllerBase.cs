@@ -16,6 +16,17 @@ public abstract class ApiControllerBase : ControllerBase
     protected IActionResult HandleResult<T>(Result<T> result) =>
         result.Succeeded ? Ok(result.Value) : Error(result);
 
+    /// <summary>Turns a FluentValidation failure into a 400 ValidationProblem response.</summary>
+    protected IActionResult ToValidationProblem(FluentValidation.Results.ValidationResult validation)
+    {
+        foreach (var error in validation.Errors)
+        {
+            ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
+        }
+
+        return ValidationProblem(ModelState);
+    }
+
     protected IActionResult Error(Result result)
     {
         var status = result.ErrorType switch

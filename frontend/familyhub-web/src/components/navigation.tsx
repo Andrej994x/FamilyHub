@@ -70,4 +70,13 @@ export const navItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    labelKey: 'nav.vault',
+    path: '/vault',
+    icon: (
+      <svg {...svgProps}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2.25m-6.75-9.75V6a6.75 6.75 0 0113.5 0v1.5m-15 0h16.5A1.5 1.5 0 0121 9v10.5a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 19.5V9a1.5 1.5 0 011.5-1.5z" />
+      </svg>
+    ),
+  },
 ];

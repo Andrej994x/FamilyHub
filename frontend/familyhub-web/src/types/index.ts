@@ -30,3 +30,6 @@ export type {
 } from './shopping';
 
 export type { NotificationResponse, UnreadCountResponse } from './notifications';
+
+export { DocumentType } from './vault';
+export type { VaultRecord, VaultAttachment } from './vault';

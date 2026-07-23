@@ -35,6 +35,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<FamilyDocument> FamilyDocuments => Set<FamilyDocument>();
+
+    public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+
+    public DbSet<Pet> Pets => Set<Pet>();
+
+    public DbSet<HomeRecord> HomeRecords => Set<HomeRecord>();
+
+    public DbSet<Warranty> Warranties => Set<Warranty>();
+
+    public DbSet<OtherRecord> OtherRecords => Set<OtherRecord>();
+
+    public DbSet<VaultAttachment> VaultAttachments => Set<VaultAttachment>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
