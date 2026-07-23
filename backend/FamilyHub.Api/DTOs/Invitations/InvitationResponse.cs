@@ -12,4 +12,5 @@ public record InvitationResponse(
     FamilyRole Role,
     InvitationStatus Status,
     DateTimeOffset ExpiresAt,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastSentAt);

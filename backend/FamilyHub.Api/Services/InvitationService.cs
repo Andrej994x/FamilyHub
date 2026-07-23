@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using FamilyHub.Api.Common;
 using FamilyHub.Api.Data;
@@ -16,24 +17,27 @@ public class InvitationService : IInvitationService
     private readonly InvitationSettings _settings;
     private readonly ILogger<InvitationService> _logger;
     private readonly INotificationService _notifications;
+    private readonly IEmailSender _emailSender;
 
     public InvitationService(
         AppDbContext db,
         IOptions<InvitationSettings> settings,
         ILogger<InvitationService> logger,
-        INotificationService notifications)
+        INotificationService notifications,
+        IEmailSender emailSender)
     {
         _db = db;
         _settings = settings.Value;
         _logger = logger;
         _notifications = notifications;
+        _emailSender = emailSender;
     }
 
     public async Task<Result<CreatedInvitationResponse>> CreateInvitationAsync(
         string userId, Guid familyId, CreateInvitationRequest request)
     {
-        var familyExists = await _db.Families.AnyAsync(f => f.Id == familyId);
-        if (!familyExists)
+        var familyName = await GetFamilyNameAsync(familyId);
+        if (familyName is null)
         {
             return Result<CreatedInvitationResponse>.Failure(ErrorType.NotFound, "Family not found.");
         }
@@ -75,18 +79,65 @@ public class InvitationService : IInvitationService
             Token = GenerateSecureToken(),
             Status = InvitationStatus.Pending,
             ExpiresAt = now.AddDays(_settings.ExpiryDays),
-            CreatedAt = now
+            CreatedAt = now,
+            LastSentAt = now,
         };
 
         _db.FamilyInvitations.Add(invitation);
         await _db.SaveChangesAsync();
 
         var acceptUrl = BuildAcceptUrl(invitation.Token);
+        await SendInvitationEmailAsync(invitation, familyName, acceptUrl);
 
-        // No email provider yet — log the invitation link so it can be delivered manually.
-        _logger.LogInformation(
-            "Family invitation created. Family={FamilyId} Email={Email} Role={Role} ExpiresAt={ExpiresAt} AcceptUrl={AcceptUrl}",
-            familyId, email, request.Role, invitation.ExpiresAt, acceptUrl);
+        return Result<CreatedInvitationResponse>.Success(
+            new CreatedInvitationResponse(ToResponse(invitation), invitation.Token, acceptUrl));
+    }
+
+    public async Task<Result<CreatedInvitationResponse>> ResendInvitationAsync(
+        string userId, Guid familyId, Guid invitationId)
+    {
+        var familyName = await GetFamilyNameAsync(familyId);
+        if (familyName is null)
+        {
+            return Result<CreatedInvitationResponse>.Failure(ErrorType.NotFound, "Family not found.");
+        }
+
+        var membership = await GetMembershipAsync(userId, familyId);
+        if (membership is null)
+        {
+            return Result<CreatedInvitationResponse>.Failure(
+                ErrorType.Forbidden, "You do not have access to this family.");
+        }
+
+        if (membership.Role is not (FamilyRole.Owner or FamilyRole.Parent))
+        {
+            return Result<CreatedInvitationResponse>.Failure(
+                ErrorType.Forbidden, "Only an Owner or Parent can resend invitations.");
+        }
+
+        var invitation = await _db.FamilyInvitations
+            .FirstOrDefaultAsync(i => i.Id == invitationId && i.FamilyId == familyId);
+        if (invitation is null)
+        {
+            return Result<CreatedInvitationResponse>.Failure(
+                ErrorType.NotFound, "Invitation not found in this family.");
+        }
+
+        // Only an open invitation can be resent; an expired one is revived with a fresh window.
+        if (invitation.Status is not (InvitationStatus.Pending or InvitationStatus.Expired))
+        {
+            return Result<CreatedInvitationResponse>.Failure(
+                ErrorType.Validation, "Only pending or expired invitations can be resent.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        invitation.Status = InvitationStatus.Pending;
+        invitation.ExpiresAt = now.AddDays(_settings.ExpiryDays);
+        invitation.LastSentAt = now;
+        await _db.SaveChangesAsync();
+
+        var acceptUrl = BuildAcceptUrl(invitation.Token);
+        await SendInvitationEmailAsync(invitation, familyName, acceptUrl);
 
         return Result<CreatedInvitationResponse>.Success(
             new CreatedInvitationResponse(ToResponse(invitation), invitation.Token, acceptUrl));
@@ -117,7 +168,7 @@ public class InvitationService : IInvitationService
             .Where(i => i.FamilyId == familyId)
             .OrderByDescending(i => i.CreatedAt)
             .Select(i => new InvitationResponse(
-                i.Id, i.FamilyId, i.Email, i.Role, i.Status, i.ExpiresAt, i.CreatedAt))
+                i.Id, i.FamilyId, i.Email, i.Role, i.Status, i.ExpiresAt, i.CreatedAt, i.LastSentAt))
             .ToListAsync();
 
         return Result<IReadOnlyList<InvitationResponse>>.Success(invitations);
@@ -222,15 +273,47 @@ public class InvitationService : IInvitationService
         return Result.Success();
     }
 
+    private Task<string?> GetFamilyNameAsync(Guid familyId) =>
+        _db.Families.Where(f => f.Id == familyId).Select(f => f.Name).FirstOrDefaultAsync();
+
     private Task<FamilyMember?> GetMembershipAsync(string userId, Guid familyId) =>
         _db.FamilyMembers.FirstOrDefaultAsync(m => m.FamilyId == familyId && m.UserId == userId);
 
     private string BuildAcceptUrl(string token) =>
         $"{_settings.AcceptUrlBase.TrimEnd('/')}?token={token}";
 
+    /// <summary>Sends the invitation email. A delivery failure is logged but never fails the request.</summary>
+    private async Task SendInvitationEmailAsync(FamilyInvitation invitation, string familyName, string acceptUrl)
+    {
+        var safeFamily = WebUtility.HtmlEncode(familyName);
+        var safeRole = WebUtility.HtmlEncode(invitation.Role.ToString());
+        var expiry = invitation.ExpiresAt.ToString("yyyy-MM-dd");
+
+        var subject = $"You're invited to join {familyName} on FamilyHub";
+        var htmlBody =
+            $"<p>Hello,</p>" +
+            $"<p>You've been invited to join <strong>{safeFamily}</strong> on FamilyHub as a <strong>{safeRole}</strong>.</p>" +
+            $"<p><a href=\"{acceptUrl}\">Accept your invitation</a></p>" +
+            $"<p>Or paste this link into your browser:<br>{acceptUrl}</p>" +
+            $"<p>This invitation expires on {expiry}.</p>";
+        var textBody =
+            $"You've been invited to join {familyName} on FamilyHub as a {invitation.Role}.\n" +
+            $"Accept your invitation: {acceptUrl}\n" +
+            $"This invitation expires on {expiry}.";
+
+        try
+        {
+            await _emailSender.SendEmailAsync(invitation.Email, subject, htmlBody, textBody);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send invitation email to {Email}.", invitation.Email);
+        }
+    }
+
     private static string GenerateSecureToken() =>
         Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 
     private static InvitationResponse ToResponse(FamilyInvitation i) =>
-        new(i.Id, i.FamilyId, i.Email, i.Role, i.Status, i.ExpiresAt, i.CreatedAt);
+        new(i.Id, i.FamilyId, i.Email, i.Role, i.Status, i.ExpiresAt, i.CreatedAt, i.LastSentAt);
 }

@@ -15,10 +15,14 @@ import FamilyMembersPage from '../pages/FamilyMembersPage';
 import Pickups from '../pages/Pickups';
 import Notifications from '../pages/Notifications';
 import FamilyVault from '../pages/FamilyVault';
+import AcceptInvitation from '../pages/AcceptInvitation';
 
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Invitation acceptance — reachable whether or not the user is signed in. */}
+      <Route path="/invitations/accept" element={<AcceptInvitation />} />
+
       {/* Public (unauthenticated) */}
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<Login />} />

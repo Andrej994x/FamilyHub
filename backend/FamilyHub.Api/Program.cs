@@ -89,6 +89,18 @@ try
     // --- Application services ---
     builder.Services.Configure<InvitationSettings>(builder.Configuration.GetSection("Invitations"));
 
+    // Email: use real SMTP when a host is configured, otherwise log the message (dev).
+    builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+    var emailSettings = builder.Configuration.GetSection("Email").Get<EmailSettings>();
+    if (!string.IsNullOrWhiteSpace(emailSettings?.Smtp.Host))
+    {
+        builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+    }
+    else
+    {
+        builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
+    }
+
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IFamilyService, FamilyService>();

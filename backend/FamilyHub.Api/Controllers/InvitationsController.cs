@@ -49,6 +49,14 @@ public class InvitationsController : ApiControllerBase
     public async Task<IActionResult> GetForFamily(Guid familyId) =>
         HandleResult(await _invitationService.GetInvitationsAsync(CurrentUserId, familyId));
 
+    [HttpPost("api/families/{familyId:guid}/invitations/{invitationId:guid}/resend")]
+    [ProducesResponseType(typeof(CreatedInvitationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Resend(Guid familyId, Guid invitationId) =>
+        HandleResult(await _invitationService.ResendInvitationAsync(CurrentUserId, familyId, invitationId));
+
     [HttpPost("api/invitations/{token}/accept")]
     [ProducesResponseType(typeof(InvitationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

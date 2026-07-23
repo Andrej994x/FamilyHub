@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { PasswordInput } from '../components/PasswordInput';
 import { getApiErrorMessage } from '../utils/apiError';
+import { postAuthRedirectPath } from '../utils/pendingInvitation';
 import type { LoginRequest } from '../types';
 
 export default function Login() {
@@ -23,7 +24,7 @@ export default function Login() {
     setServerError(null);
     try {
       await login(values);
-      navigate('/dashboard', { replace: true });
+      navigate(postAuthRedirectPath(), { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error, t('auth.errors.invalidCredentials')));
     }

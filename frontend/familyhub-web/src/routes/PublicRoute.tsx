@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { FullPageLoader } from '../components/FullPageLoader';
+import { postAuthRedirectPath } from '../utils/pendingInvitation';
 
 /**
  * Routes for unauthenticated users (login/register). Authenticated users are
@@ -15,7 +16,8 @@ export function PublicRoute() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    // Continue a pending invitation if one is waiting, otherwise go to the dashboard.
+    return <Navigate to={postAuthRedirectPath()} replace />;
   }
 
   return (

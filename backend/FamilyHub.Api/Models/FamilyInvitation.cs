@@ -21,6 +21,9 @@ public class FamilyInvitation
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>When the invitation email was last sent (on create or resend).</summary>
+    public DateTimeOffset? LastSentAt { get; set; }
+
     // Navigation properties
     public Family? Family { get; set; }
 }

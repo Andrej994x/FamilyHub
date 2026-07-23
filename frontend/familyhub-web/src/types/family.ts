@@ -39,6 +39,7 @@ export interface InvitationResponse {
   status: number;
   expiresAt: string;
   createdAt: string;
+  lastSentAt: string | null;
 }
 
 export interface CreatedInvitationResponse {

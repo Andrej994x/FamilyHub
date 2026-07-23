@@ -22,6 +22,8 @@ export default function FamilyMembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resentId, setResentId] = useState<string | null>(null);
 
   const canManage = canManageFamily(role);
   const owner = isOwner(role);
@@ -79,6 +81,21 @@ export default function FamilyMembersPage() {
       await loadInvitations();
     } catch (err) {
       setError(getApiErrorMessage(err, t('invitations.errors.createFailed')));
+    }
+  };
+
+  const handleResendInvitation = async (invitation: InvitationResponse) => {
+    setResendingId(invitation.id);
+    setError(null);
+    try {
+      await invitationService.resend(familyId, invitation.id);
+      await loadInvitations();
+      setResentId(invitation.id);
+      window.setTimeout(() => setResentId((id) => (id === invitation.id ? null : id)), 2000);
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('invitations.errors.resendFailed')));
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -164,33 +181,62 @@ export default function FamilyMembersPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
-              {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-gray-900">{invitation.email}</p>
-                    <p className="text-xs text-gray-500">
-                      {t(roleLabelKey(invitation.role))} ·{' '}
-                      {t('invitations.expires', {
-                        date: formatDate(invitation.expiresAt, i18n.language),
-                      })}
-                    </p>
+              {invitations.map((invitation) => {
+                const canResend =
+                  invitation.status === InvitationStatus.Pending ||
+                  invitation.status === InvitationStatus.Expired;
+                return (
+                  <div key={invitation.id} className="flex items-center justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">{invitation.email}</p>
+                      <p className="text-xs text-gray-500">
+                        {t(roleLabelKey(invitation.role))} ·{' '}
+                        {t('invitations.expires', {
+                          date: formatDate(invitation.expiresAt, i18n.language),
+                        })}
+                      </p>
+                      {invitation.lastSentAt && (
+                        <p className="text-xs text-gray-400">
+                          {t('invitations.lastSent', {
+                            date: formatDate(invitation.lastSentAt, i18n.language),
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                        {t(invitationStatusKey(invitation.status))}
+                      </span>
+                      {canResend &&
+                        (resentId === invitation.id ? (
+                          <span className="text-xs font-medium text-green-600">
+                            {t('invitations.resent')}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleResendInvitation(invitation)}
+                            disabled={resendingId === invitation.id}
+                            className="text-xs font-medium text-brand-600 hover:underline disabled:opacity-50"
+                          >
+                            {resendingId === invitation.id
+                              ? t('invitations.resending')
+                              : t('invitations.resend')}
+                          </button>
+                        ))}
+                      {invitation.status === InvitationStatus.Pending && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelInvitation(invitation)}
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                      {t(invitationStatusKey(invitation.status))}
-                    </span>
-                    {invitation.status === InvitationStatus.Pending && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelInvitation(invitation)}
-                        className="text-xs font-medium text-red-600 hover:underline"
-                      >
-                        {t('common.cancel')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

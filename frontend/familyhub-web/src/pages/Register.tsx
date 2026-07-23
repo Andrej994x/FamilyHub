@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { PasswordInput } from '../components/PasswordInput';
 import { getApiErrorMessage } from '../utils/apiError';
+import { postAuthRedirectPath } from '../utils/pendingInvitation';
 import type { RegisterRequest } from '../types';
 
 export default function Register() {
@@ -23,7 +24,7 @@ export default function Register() {
     setServerError(null);
     try {
       await registerUser(values);
-      navigate('/dashboard', { replace: true });
+      navigate(postAuthRedirectPath(), { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error, t('auth.errors.registerFailed')));
     }

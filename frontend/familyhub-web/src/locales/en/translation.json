@@ -113,7 +113,11 @@
     "invite": "Invite member",
     "empty": "No invitations yet.",
     "expires": "Expires {{date}}",
+    "lastSent": "Sent {{date}}",
     "cancelConfirm": "Cancel this invitation?",
+    "resend": "Resend",
+    "resending": "Sending…",
+    "resent": "Sent!",
     "status": {
       "pending": "Pending",
       "accepted": "Accepted",
@@ -132,7 +136,27 @@
       "done": "Done"
     },
     "errors": {
-      "createFailed": "Could not create the invitation."
+      "createFailed": "Could not create the invitation.",
+      "resendFailed": "Could not resend the invitation."
+    }
+  },
+  "acceptInvitation": {
+    "title": "You've been invited",
+    "invitedSubtitle": "Sign in or create an account to join this family on FamilyHub.",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "continueNote": "You'll return here to finish joining after you sign in.",
+    "joining": "Joining the family…",
+    "successTitle": "You've joined the family!",
+    "successHint": "Welcome aboard.",
+    "goToFamily": "Go to my family",
+    "invalidTitle": "Invalid invitation link",
+    "invalidHint": "This link is missing its invitation token.",
+    "backToLogin": "Go to sign in",
+    "errorTitle": "Couldn't accept the invitation",
+    "goToDashboard": "Continue",
+    "errors": {
+      "generic": "Could not accept the invitation."
     }
   },
   "children": {

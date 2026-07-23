@@ -22,6 +22,16 @@ export const invitationService = {
     return data;
   },
 
+  async resend(
+    familyId: string,
+    invitationId: string,
+  ): Promise<CreatedInvitationResponse> {
+    const { data } = await apiClient.post<CreatedInvitationResponse>(
+      `/families/${familyId}/invitations/${invitationId}/resend`,
+    );
+    return data;
+  },
+
   async cancel(familyId: string, invitationId: string): Promise<void> {
     await apiClient.delete(`/families/${familyId}/invitations/${invitationId}`);
   },
