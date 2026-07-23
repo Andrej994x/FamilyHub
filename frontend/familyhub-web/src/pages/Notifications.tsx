@@ -1,56 +1,149 @@
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../hooks/useNotifications';
-import { notificationRoute } from '../utils/labels';
 import { NotificationItem } from '../components/NotificationItem';
 import type { NotificationResponse } from '../types';
+
+type Tab = 'all' | 'unread' | 'read';
 
 export default function Notifications() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    refresh,
+    markAsRead,
+    markAllAsRead,
+    deleteOne,
+    deleteAllRead,
+  } = useNotifications();
+
+  const [tab, setTab] = useState<Tab>('all');
+
+  const readCount = notifications.length - unreadCount;
+
+  const visible = useMemo(() => {
+    switch (tab) {
+      case 'unread':
+        return notifications.filter((n) => !n.isRead);
+      case 'read':
+        return notifications.filter((n) => n.isRead);
+      default:
+        return notifications;
+    }
+  }, [notifications, tab]);
 
   const handleActivate = (notification: NotificationResponse) => {
     if (!notification.isRead) {
       void markAsRead(notification.id);
     }
-    const route = notificationRoute(notification.type);
-    if (route) {
-      navigate(route);
+    if (notification.relatedUrl) {
+      navigate(notification.relatedUrl);
     }
   };
 
+  const handleDeleteAllRead = () => {
+    if (readCount === 0 || !window.confirm(t('notifications.deleteAllReadConfirm'))) {
+      return;
+    }
+    void deleteAllRead();
+  };
+
+  const tabs: { key: Tab; label: string; count: number }[] = [
+    { key: 'all', label: t('notifications.tabs.all'), count: notifications.length },
+    { key: 'unread', label: t('notifications.tabs.unread'), count: unreadCount },
+    { key: 'read', label: t('notifications.tabs.read'), count: readCount },
+  ];
+
+  const emptyMessage =
+    tab === 'unread'
+      ? t('notifications.emptyUnread')
+      : tab === 'read'
+        ? t('notifications.emptyRead')
+        : t('notifications.empty');
+
+  const isInitialLoading = loading && notifications.length === 0;
+  const isError = error && notifications.length === 0;
+
   return (
     <div className="mx-auto max-w-2xl">
-      <header className="mb-6 flex items-center justify-between gap-3">
+      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{t('notifications.title')}</h1>
           <p className="mt-1 text-sm text-gray-500">{t('notifications.subtitle')}</p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={() => void markAllAsRead()}
-            className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t('notifications.markAllRead')}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={() => void markAllAsRead()}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {t('notifications.markAllRead')}
+            </button>
+          )}
+          {readCount > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAllRead}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-red-600"
+            >
+              {t('notifications.deleteAllRead')}
+            </button>
+          )}
+        </div>
       </header>
 
-      {loading && notifications.length === 0 ? (
-        <p className="text-sm text-gray-400">{t('common.loading')}</p>
-      ) : notifications.length === 0 ? (
+      {/* Tabs */}
+      <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1">
+        {tabs.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setTab(item.key)}
+            className={`flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              tab === item.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {item.label}
+            <span className={`ml-1.5 text-xs ${tab === item.key ? 'text-brand-600' : 'text-gray-400'}`}>
+              {item.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {isInitialLoading ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center text-sm text-gray-400">
+          {t('common.loading')}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white p-10 text-center">
+          <p className="text-sm text-gray-500">{t('notifications.loadError')}</p>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            {t('common.retry')}
+          </button>
+        </div>
+      ) : visible.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-10 text-center text-sm text-gray-400">
-          {t('notifications.empty')}
+          {emptyMessage}
         </div>
       ) : (
         <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {notifications.map((notification) => (
+          {visible.map((notification) => (
             <NotificationItem
               key={notification.id}
               notification={notification}
               onActivate={handleActivate}
+              onDelete={(n) => void deleteOne(n.id)}
             />
           ))}
         </div>

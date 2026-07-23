@@ -242,38 +242,38 @@ public static class DbSeeder
             {
                 new()
                 {
-                    Id = Guid.NewGuid(), UserId = bob.Id, Type = NotificationType.PickupAssigned,
+                    Id = Guid.NewGuid(), UserId = bob.Id, FamilyId = FamilyId, Type = NotificationType.Calendar,
                     Title = "Pickup assigned",
                     Message = $"You have been assigned a pickup at {confirmedPickup.Location}.",
-                    RelatedEntityId = confirmedPickup.Id, IsRead = false, CreatedAt = now.AddHours(-3),
+                    RelatedUrl = "/pickups", IsRead = false, CreatedAt = now.AddHours(-3),
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(), UserId = bob.Id, Type = NotificationType.TaskAssigned,
-                    Title = "Task assigned",
+                    Id = Guid.NewGuid(), UserId = bob.Id, FamilyId = FamilyId, Type = NotificationType.Task,
+                    Title = "New task assigned",
                     Message = $"You have been assigned the task \"{groceriesTask.Title}\".",
-                    RelatedEntityId = groceriesTask.Id, IsRead = false, CreatedAt = now.AddHours(-2),
+                    RelatedUrl = "/tasks", IsRead = false, CreatedAt = now.AddHours(-2),
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(), UserId = bob.Id, Type = NotificationType.PickupRejected,
+                    Id = Guid.NewGuid(), UserId = bob.Id, FamilyId = FamilyId, Type = NotificationType.Calendar,
                     Title = "Pickup rejected",
                     Message = $"The assigned member cannot attend the pickup at {rejectedPickup.Location}.",
-                    RelatedEntityId = rejectedPickup.Id, IsRead = false, CreatedAt = now.AddHours(-1),
+                    RelatedUrl = "/pickups", IsRead = false, CreatedAt = now.AddHours(-1),
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(), UserId = alice.Id, Type = NotificationType.InvitationAccepted,
-                    Title = "Invitation accepted",
+                    Id = Guid.NewGuid(), UserId = alice.Id, FamilyId = FamilyId, Type = NotificationType.Family,
+                    Title = "New family member",
                     Message = "Bob has joined The Rivera Family.",
-                    RelatedEntityId = FamilyId, IsRead = true, CreatedAt = now.AddMonths(-2).AddDays(1),
+                    RelatedUrl = "/family", IsRead = true, CreatedAt = now.AddMonths(-2).AddDays(1),
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(), UserId = alice.Id, Type = NotificationType.PickupTakenOver,
+                    Id = Guid.NewGuid(), UserId = alice.Id, FamilyId = FamilyId, Type = NotificationType.Calendar,
                     Title = "Pickup taken over",
                     Message = $"Another member has taken over the pickup at {rejectedPickup.Location}.",
-                    RelatedEntityId = rejectedPickup.Id, IsRead = true, CreatedAt = now.AddMinutes(-30),
+                    RelatedUrl = "/pickups", IsRead = true, CreatedAt = now.AddMinutes(-30),
                 },
             };
 

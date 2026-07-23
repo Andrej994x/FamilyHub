@@ -17,13 +17,15 @@ public class NotificationService : INotificationService
         _db = db;
     }
 
+    // ---- Query / read-state ----
+
     public async Task<IReadOnlyList<NotificationResponse>> GetForUserAsync(string userId)
     {
         return await _db.Notifications
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new NotificationResponse(
-                n.Id, n.Title, n.Message, n.Type, n.RelatedEntityId, n.IsRead, n.CreatedAt))
+                n.Id, n.FamilyId, n.Type, n.Title, n.Message, n.RelatedUrl, n.IsRead, n.CreatedAt))
             .ToListAsync();
     }
 
@@ -53,25 +55,104 @@ public class NotificationService : INotificationService
             .Where(n => n.UserId == userId && !n.IsRead)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
 
-    public async Task CreateAsync(
-        string userId, string title, string message, NotificationType type, Guid? relatedEntityId = null)
+    public async Task<Result> DeleteAsync(string userId, Guid notificationId)
     {
-        if (string.IsNullOrEmpty(userId))
+        var deleted = await _db.Notifications
+            .Where(n => n.Id == notificationId && n.UserId == userId)
+            .ExecuteDeleteAsync();
+
+        return deleted == 0
+            ? Result.Failure(ErrorType.NotFound, "Notification not found.")
+            : Result.Success();
+    }
+
+    public Task DeleteAllReadAsync(string userId) =>
+        _db.Notifications
+            .Where(n => n.UserId == userId && n.IsRead)
+            .ExecuteDeleteAsync();
+
+    // ---- Creation primitives ----
+
+    public Task CreateForUserAsync(
+        string userId,
+        NotificationType type,
+        string title,
+        string message,
+        Guid? familyId = null,
+        string? relatedUrl = null,
+        string? actorUserId = null) =>
+        PersistAsync(new[] { userId }, type, title, message, familyId, relatedUrl, actorUserId);
+
+    public Task CreateForUsersAsync(
+        IEnumerable<string> userIds,
+        NotificationType type,
+        string title,
+        string message,
+        Guid? familyId = null,
+        string? relatedUrl = null,
+        string? actorUserId = null) =>
+        PersistAsync(userIds, type, title, message, familyId, relatedUrl, actorUserId);
+
+    public async Task CreateForFamilyAsync(
+        Guid familyId,
+        NotificationType type,
+        string title,
+        string message,
+        string? relatedUrl = null,
+        string? actorUserId = null,
+        IReadOnlyCollection<FamilyRole>? roles = null)
+    {
+        var query = _db.FamilyMembers.Where(m => m.FamilyId == familyId);
+        if (roles is { Count: > 0 })
+        {
+            query = query.Where(m => roles.Contains(m.Role));
+        }
+
+        var recipientIds = await query.Select(m => m.UserId).ToListAsync();
+
+        await PersistAsync(recipientIds, type, title, message, familyId, relatedUrl, actorUserId);
+    }
+
+    /// <summary>
+    /// Persists one notification per distinct recipient in a single save, skipping
+    /// empty ids and the actor. Central choke point for the "never notify the actor" rule.
+    /// </summary>
+    private async Task PersistAsync(
+        IEnumerable<string> userIds,
+        NotificationType type,
+        string title,
+        string message,
+        Guid? familyId,
+        string? relatedUrl,
+        string? actorUserId)
+    {
+        var recipients = userIds
+            .Where(id => !string.IsNullOrEmpty(id) && id != actorUserId)
+            .Distinct()
+            .ToList();
+
+        if (recipients.Count == 0)
         {
             return;
         }
 
-        _db.Notifications.Add(new Notification
+        var now = DateTimeOffset.UtcNow;
+        foreach (var recipient in recipients)
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Title = title,
-            Message = message,
-            Type = type,
-            RelatedEntityId = relatedEntityId,
-            IsRead = false,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
+            _db.Notifications.Add(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = recipient,
+                FamilyId = familyId,
+                Type = type,
+                Title = title,
+                Message = message,
+                RelatedUrl = relatedUrl,
+                IsRead = false,
+                CreatedAt = now,
+                IsPushSent = false,
+            });
+        }
 
         await _db.SaveChangesAsync();
     }

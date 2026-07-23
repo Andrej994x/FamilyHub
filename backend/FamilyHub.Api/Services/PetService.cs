@@ -12,7 +12,8 @@ public class PetService : VaultServiceBase, IPetService
 {
     private const VaultRecordType OwnerType = VaultRecordType.Pet;
 
-    public PetService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public PetService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<PetResponse>> CreateAsync(string userId, Guid familyId, CreatePetRequest request)
     {
@@ -33,6 +34,8 @@ public class PetService : VaultServiceBase, IPetService
             NextVaccinationDate = request.NextVaccinationDate,
             Veterinarian = Clean(request.Veterinarian),
             Notes = Clean(request.Notes),
+            IsImportant = request.IsImportant,
+            RelatedMemberId = request.RelatedMemberId,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -44,6 +47,8 @@ public class PetService : VaultServiceBase, IPetService
         Db.Pets.Add(pet);
         Db.VaultAttachments.AddRange(attachments);
         await SaveOrRollbackAsync(attachments);
+
+        await NotifyImportantRecordAsync(familyId, userId, pet.Name, pet.IsImportant, pet.RelatedMemberId);
 
         return Result<PetResponse>.Success(ToResponse(pet, attachments));
     }
@@ -92,6 +97,8 @@ public class PetService : VaultServiceBase, IPetService
         pet.NextVaccinationDate = request.NextVaccinationDate;
         pet.Veterinarian = Clean(request.Veterinarian);
         pet.Notes = Clean(request.Notes);
+        pet.IsImportant = request.IsImportant;
+        pet.RelatedMemberId = request.RelatedMemberId;
 
         var built = await BuildAttachmentsAsync(userId, familyId, OwnerType, pet.Id, request.Attachments);
         if (!built.Succeeded) return Result<PetResponse>.Failure(built.ErrorType!.Value, built.Error!);
@@ -128,6 +135,6 @@ public class PetService : VaultServiceBase, IPetService
 
     private PetResponse ToResponse(Pet p, IEnumerable<VaultAttachment> attachments) =>
         new(p.Id, p.FamilyId, p.Name, p.Type, p.Breed, p.DateOfBirth, p.MicrochipNumber, p.VaccinationName,
-            p.LastVaccinationDate, p.NextVaccinationDate, p.Veterinarian, p.Notes, p.CreatedByUserId,
-            p.CreatedAt, ToAttachmentResponses(attachments));
+            p.LastVaccinationDate, p.NextVaccinationDate, p.Veterinarian, p.Notes, p.IsImportant,
+            p.RelatedMemberId, p.CreatedByUserId, p.CreatedAt, ToAttachmentResponses(attachments));
 }

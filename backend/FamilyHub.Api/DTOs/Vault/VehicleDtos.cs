@@ -11,6 +11,8 @@ public class CreateVehicleRequest
     public DateTimeOffset? NextServiceDate { get; set; }
     public int? NextServiceMileage { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     public List<IFormFile>? Attachments { get; set; }
 }
 
@@ -25,6 +27,8 @@ public class UpdateVehicleRequest
     public DateTimeOffset? NextServiceDate { get; set; }
     public int? NextServiceMileage { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     /// <summary>New files to append to the vehicle.</summary>
     public List<IFormFile>? Attachments { get; set; }
 }
@@ -41,6 +45,8 @@ public record VehicleResponse(
     DateTimeOffset? NextServiceDate,
     int? NextServiceMileage,
     string? Notes,
+    bool IsImportant,
+    Guid? RelatedMemberId,
     string CreatedByUserId,
     DateTimeOffset CreatedAt,
     IReadOnlyList<VaultAttachmentResponse> Attachments);

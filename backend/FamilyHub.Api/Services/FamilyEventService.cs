@@ -3,17 +3,22 @@ using FamilyHub.Api.Data;
 using FamilyHub.Api.DTOs.Events;
 using FamilyHub.Api.Interfaces;
 using FamilyHub.Api.Models;
+using FamilyHub.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyHub.Api.Services;
 
 public class FamilyEventService : IFamilyEventService
 {
-    private readonly AppDbContext _db;
+    private const string CalendarUrl = "/calendar";
 
-    public FamilyEventService(AppDbContext db)
+    private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
+
+    public FamilyEventService(AppDbContext db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<Result<EventResponse>> CreateEventAsync(string userId, Guid familyId, CreateEventRequest request)
@@ -49,7 +54,39 @@ public class FamilyEventService : IFamilyEventService
         _db.FamilyEvents.Add(ev);
         await _db.SaveChangesAsync();
 
+        await NotifyEventCreatedAsync(userId, ev);
+
         return Result<EventResponse>.Success(ToResponse(ev));
+    }
+
+    /// <summary>
+    /// Calendar rule: when an event names a participant (the assigned member) notify
+    /// only that member; otherwise notify the whole family. The creator is never notified.
+    /// </summary>
+    private async Task NotifyEventCreatedAsync(string actorUserId, FamilyEvent ev)
+    {
+        var message = $"A new event \"{ev.Title}\" was scheduled for {ev.StartDateTime:yyyy-MM-dd HH:mm}.";
+
+        if (ev.AssignedMemberId is Guid memberId)
+        {
+            var participantUserId = await _db.FamilyMembers
+                .Where(m => m.Id == memberId)
+                .Select(m => m.UserId)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(participantUserId))
+            {
+                await _notifications.CreateForUserAsync(
+                    participantUserId, NotificationType.Calendar, "New event for you", message,
+                    ev.FamilyId, CalendarUrl, actorUserId);
+            }
+
+            return;
+        }
+
+        await _notifications.CreateForFamilyAsync(
+            ev.FamilyId, NotificationType.Calendar, "New family event", message,
+            CalendarUrl, actorUserId);
     }
 
     public async Task<Result<IReadOnlyList<EventResponse>>> GetEventsAsync(string userId, Guid familyId, EventFilter filter)

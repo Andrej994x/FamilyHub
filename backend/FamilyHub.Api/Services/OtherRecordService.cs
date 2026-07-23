@@ -12,7 +12,8 @@ public class OtherRecordService : VaultServiceBase, IOtherRecordService
 {
     private const VaultRecordType OwnerType = VaultRecordType.Other;
 
-    public OtherRecordService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public OtherRecordService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<OtherRecordResponse>> CreateAsync(string userId, Guid familyId, CreateOtherRecordRequest request)
     {
@@ -27,6 +28,8 @@ public class OtherRecordService : VaultServiceBase, IOtherRecordService
             Description = Clean(request.Description),
             ImportantDate = request.ImportantDate,
             ExpiryDate = request.ExpiryDate,
+            IsImportant = request.IsImportant,
+            RelatedMemberId = request.RelatedMemberId,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -38,6 +41,8 @@ public class OtherRecordService : VaultServiceBase, IOtherRecordService
         Db.OtherRecords.Add(record);
         Db.VaultAttachments.AddRange(attachments);
         await SaveOrRollbackAsync(attachments);
+
+        await NotifyImportantRecordAsync(familyId, userId, record.Title, record.IsImportant, record.RelatedMemberId);
 
         return Result<OtherRecordResponse>.Success(ToResponse(record, attachments));
     }
@@ -80,6 +85,8 @@ public class OtherRecordService : VaultServiceBase, IOtherRecordService
         record.Description = Clean(request.Description);
         record.ImportantDate = request.ImportantDate;
         record.ExpiryDate = request.ExpiryDate;
+        record.IsImportant = request.IsImportant;
+        record.RelatedMemberId = request.RelatedMemberId;
 
         var built = await BuildAttachmentsAsync(userId, familyId, OwnerType, record.Id, request.Attachments);
         if (!built.Succeeded) return Result<OtherRecordResponse>.Failure(built.ErrorType!.Value, built.Error!);
@@ -116,5 +123,5 @@ public class OtherRecordService : VaultServiceBase, IOtherRecordService
 
     private OtherRecordResponse ToResponse(OtherRecord o, IEnumerable<VaultAttachment> attachments) =>
         new(o.Id, o.FamilyId, o.Title, o.Description, o.ImportantDate, o.ExpiryDate,
-            o.CreatedByUserId, o.CreatedAt, ToAttachmentResponses(attachments));
+            o.IsImportant, o.RelatedMemberId, o.CreatedByUserId, o.CreatedAt, ToAttachmentResponses(attachments));
 }

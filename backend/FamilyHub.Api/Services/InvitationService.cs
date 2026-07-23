@@ -217,21 +217,15 @@ public class InvitationService : IInvitationService
         invitation.Status = InvitationStatus.Accepted;
         await _db.SaveChangesAsync();
 
-        // Notify the family owner that the invitation was accepted.
-        var ownerUserId = await _db.Families
-            .Where(f => f.Id == invitation.FamilyId)
-            .Select(f => f.CreatedByUserId)
-            .FirstOrDefaultAsync();
-
-        if (!string.IsNullOrEmpty(ownerUserId) && ownerUserId != userId)
-        {
-            await _notifications.CreateAsync(
-                ownerUserId,
-                "Invitation accepted",
-                $"{invitation.Email} has joined your family.",
-                NotificationType.InvitationAccepted,
-                invitation.FamilyId);
-        }
+        // New-member rule: notify the family's Owner and Parent members (never the joiner).
+        await _notifications.CreateForFamilyAsync(
+            invitation.FamilyId,
+            NotificationType.Family,
+            "New family member",
+            $"{invitation.Email} has joined your family.",
+            "/family",
+            actorUserId: userId,
+            roles: new[] { FamilyRole.Owner, FamilyRole.Parent });
 
         return Result<InvitationResponse>.Success(ToResponse(invitation));
     }

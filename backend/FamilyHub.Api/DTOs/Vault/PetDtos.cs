@@ -12,6 +12,8 @@ public class CreatePetRequest
     public DateTimeOffset? NextVaccinationDate { get; set; }
     public string? Veterinarian { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     public List<IFormFile>? Attachments { get; set; }
 }
 
@@ -27,6 +29,8 @@ public class UpdatePetRequest
     public DateTimeOffset? NextVaccinationDate { get; set; }
     public string? Veterinarian { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     /// <summary>New files to append to the pet.</summary>
     public List<IFormFile>? Attachments { get; set; }
 }
@@ -44,6 +48,8 @@ public record PetResponse(
     DateTimeOffset? NextVaccinationDate,
     string? Veterinarian,
     string? Notes,
+    bool IsImportant,
+    Guid? RelatedMemberId,
     string CreatedByUserId,
     DateTimeOffset CreatedAt,
     IReadOnlyList<VaultAttachmentResponse> Attachments);

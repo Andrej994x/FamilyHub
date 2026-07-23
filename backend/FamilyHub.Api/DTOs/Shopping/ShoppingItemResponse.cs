@@ -9,6 +9,7 @@ public record ShoppingItemResponse(
     string? Quantity,
     ItemCategory Category,
     bool IsPurchased,
+    bool IsImportant,
     string AddedByUserId,
     string? PurchasedByUserId,
     DateTimeOffset CreatedAt,

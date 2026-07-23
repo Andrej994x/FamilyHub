@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../hooks/useNotifications';
-import { notificationRoute } from '../utils/labels';
 import { NotificationItem } from './NotificationItem';
 import type { NotificationResponse } from '../types';
+
+/** How many notifications the desktop dropdown previews. */
+const PREVIEW_COUNT = 6;
 
 export function NotificationBell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, refresh } = useNotifications();
+  const { notifications, unreadCount, loading, error, markAsRead, markAllAsRead, refresh } =
+    useNotifications();
 
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,13 +60,18 @@ export function NotificationBell() {
       void markAsRead(notification.id);
     }
     setOpen(false);
-    const route = notificationRoute(notification.type);
-    if (route) {
-      navigate(route);
+    if (notification.relatedUrl) {
+      navigate(notification.relatedUrl);
     }
   };
 
+  const viewAll = () => {
+    setOpen(false);
+    navigate('/notifications');
+  };
+
   const badge = unreadCount > 9 ? '9+' : String(unreadCount);
+  const preview = notifications.slice(0, PREVIEW_COUNT);
 
   return (
     <div ref={containerRef} className="relative">
@@ -105,11 +113,15 @@ export function NotificationBell() {
             )}
           </div>
 
-          {notifications.length === 0 ? (
+          {loading && notifications.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-gray-400">{t('common.loading')}</p>
+          ) : error && notifications.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-gray-400">{t('notifications.loadError')}</p>
+          ) : notifications.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-gray-400">{t('notifications.empty')}</p>
           ) : (
             <div className="max-h-96 divide-y divide-gray-100 overflow-y-auto">
-              {notifications.map((notification) => (
+              {preview.map((notification) => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
@@ -118,6 +130,14 @@ export function NotificationBell() {
               ))}
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={viewAll}
+            className="block w-full border-t border-gray-100 px-4 py-3 text-center text-sm font-medium text-brand-600 hover:bg-gray-50"
+          >
+            {t('notifications.viewAll')}
+          </button>
         </div>
       )}
     </div>

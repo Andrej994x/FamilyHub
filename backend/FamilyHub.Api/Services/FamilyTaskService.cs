@@ -52,7 +52,7 @@ public class FamilyTaskService : IFamilyTaskService
         _db.FamilyTasks.Add(task);
         await _db.SaveChangesAsync();
 
-        await NotifyAssigneeAsync(userId, task.AssignedToMemberId, task.Id, task.Title);
+        await NotifyTaskAsync(userId, familyId, task.AssignedToMemberId, task.Title);
 
         return Result<TaskResponse>.Success(ToResponse(task));
     }
@@ -155,9 +155,9 @@ public class FamilyTaskService : IFamilyTaskService
         await _db.SaveChangesAsync();
 
         // Notify only when the task is (re)assigned to a different member.
-        if (task.AssignedToMemberId is not null && task.AssignedToMemberId != previousAssignee)
+        if (task.AssignedToMemberId is Guid newAssignee && newAssignee != previousAssignee)
         {
-            await NotifyAssigneeAsync(userId, task.AssignedToMemberId, task.Id, task.Title);
+            await NotifyAssignedMemberAsync(userId, familyId, newAssignee, task.Title);
         }
 
         return Result<TaskResponse>.Success(ToResponse(task));
@@ -230,30 +230,50 @@ public class FamilyTaskService : IFamilyTaskService
     private Task<bool> IsMemberOfFamily(Guid memberId, Guid familyId) =>
         _db.FamilyMembers.AnyAsync(m => m.Id == memberId && m.FamilyId == familyId);
 
-    /// <summary>Notifies the assigned member's user, unless they assigned the task to themselves.</summary>
-    private async Task NotifyAssigneeAsync(string actorUserId, Guid? assignedMemberId, Guid taskId, string title)
+    private const string TasksUrl = "/tasks";
+
+    /// <summary>
+    /// Applies the task notification rules on creation: an assigned task notifies the
+    /// assigned member; a whole-family task (no assignee) notifies all family members.
+    /// The actor is never notified.
+    /// </summary>
+    private Task NotifyTaskAsync(string actorUserId, Guid familyId, Guid? assignedMemberId, string title)
     {
-        if (assignedMemberId is not Guid memberId)
+        if (assignedMemberId is Guid memberId)
         {
-            return;
+            return NotifyAssignedMemberAsync(actorUserId, familyId, memberId, title);
         }
 
+        return _notifications.CreateForFamilyAsync(
+            familyId,
+            NotificationType.Task,
+            "New family task",
+            $"A new task \"{title}\" was added for the family.",
+            TasksUrl,
+            actorUserId);
+    }
+
+    /// <summary>Notifies the assigned member's user, unless they assigned the task to themselves.</summary>
+    private async Task NotifyAssignedMemberAsync(string actorUserId, Guid familyId, Guid assignedMemberId, string title)
+    {
         var assigneeUserId = await _db.FamilyMembers
-            .Where(m => m.Id == memberId)
+            .Where(m => m.Id == assignedMemberId)
             .Select(m => m.UserId)
             .FirstOrDefaultAsync();
 
-        if (string.IsNullOrEmpty(assigneeUserId) || assigneeUserId == actorUserId)
+        if (string.IsNullOrEmpty(assigneeUserId))
         {
             return;
         }
 
-        await _notifications.CreateAsync(
+        await _notifications.CreateForUserAsync(
             assigneeUserId,
+            NotificationType.Task,
             "New task assigned",
             $"You have been assigned the task \"{title}\".",
-            NotificationType.TaskAssigned,
-            taskId);
+            familyId,
+            TasksUrl,
+            actorUserId);
     }
 
     private static TaskResponse ToResponse(FamilyTask t) =>

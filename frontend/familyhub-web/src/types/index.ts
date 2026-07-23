@@ -29,6 +29,7 @@ export type {
   ShoppingItemRequest,
 } from './shopping';
 
+export { NotificationType } from './notifications';
 export type { NotificationResponse, UnreadCountResponse } from './notifications';
 
 export { DocumentType } from './vault';

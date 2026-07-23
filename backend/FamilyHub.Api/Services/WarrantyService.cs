@@ -12,7 +12,8 @@ public class WarrantyService : VaultServiceBase, IWarrantyService
 {
     private const VaultRecordType OwnerType = VaultRecordType.Warranty;
 
-    public WarrantyService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public WarrantyService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<WarrantyResponse>> CreateAsync(string userId, Guid familyId, CreateWarrantyRequest request)
     {
@@ -29,6 +30,8 @@ public class WarrantyService : VaultServiceBase, IWarrantyService
             WarrantyExpiryDate = request.WarrantyExpiryDate,
             SerialNumber = Clean(request.SerialNumber),
             Notes = Clean(request.Notes),
+            IsImportant = request.IsImportant,
+            RelatedMemberId = request.RelatedMemberId,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -40,6 +43,8 @@ public class WarrantyService : VaultServiceBase, IWarrantyService
         Db.Warranties.Add(warranty);
         Db.VaultAttachments.AddRange(attachments);
         await SaveOrRollbackAsync(attachments);
+
+        await NotifyImportantRecordAsync(familyId, userId, warranty.ProductName, warranty.IsImportant, warranty.RelatedMemberId);
 
         return Result<WarrantyResponse>.Success(ToResponse(warranty, attachments));
     }
@@ -84,6 +89,8 @@ public class WarrantyService : VaultServiceBase, IWarrantyService
         warranty.WarrantyExpiryDate = request.WarrantyExpiryDate;
         warranty.SerialNumber = Clean(request.SerialNumber);
         warranty.Notes = Clean(request.Notes);
+        warranty.IsImportant = request.IsImportant;
+        warranty.RelatedMemberId = request.RelatedMemberId;
 
         var built = await BuildAttachmentsAsync(userId, familyId, OwnerType, warranty.Id, request.Attachments);
         if (!built.Succeeded) return Result<WarrantyResponse>.Failure(built.ErrorType!.Value, built.Error!);
@@ -120,5 +127,5 @@ public class WarrantyService : VaultServiceBase, IWarrantyService
 
     private WarrantyResponse ToResponse(Warranty w, IEnumerable<VaultAttachment> attachments) =>
         new(w.Id, w.FamilyId, w.ProductName, w.Store, w.PurchaseDate, w.WarrantyExpiryDate, w.SerialNumber,
-            w.Notes, w.CreatedByUserId, w.CreatedAt, ToAttachmentResponses(attachments));
+            w.Notes, w.IsImportant, w.RelatedMemberId, w.CreatedByUserId, w.CreatedAt, ToAttachmentResponses(attachments));
 }

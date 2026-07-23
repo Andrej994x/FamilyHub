@@ -43,4 +43,21 @@ public class NotificationsController : ApiControllerBase
         await _notifications.MarkAllAsReadAsync(CurrentUserId);
         return NoContent();
     }
+
+    [HttpDelete("read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteAllRead()
+    {
+        await _notifications.DeleteAllReadAsync(CurrentUserId);
+        return NoContent();
+    }
+
+    [HttpDelete("{notificationId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid notificationId)
+    {
+        var result = await _notifications.DeleteAsync(CurrentUserId, notificationId);
+        return result.Succeeded ? NoContent() : Error(result);
+    }
 }

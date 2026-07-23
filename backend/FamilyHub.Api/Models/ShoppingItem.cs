@@ -17,6 +17,9 @@ public class ShoppingItem
 
     public bool IsPurchased { get; set; }
 
+    /// <summary>When true, adding or updating the item notifies the whole family.</summary>
+    public bool IsImportant { get; set; }
+
     public string AddedByUserId { get; set; } = string.Empty;
 
     public string? PurchasedByUserId { get; set; }

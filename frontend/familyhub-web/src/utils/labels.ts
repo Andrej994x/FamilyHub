@@ -36,19 +36,32 @@ export function itemCategoryKey(category: number): string {
   return ITEM_CATEGORY_KEYS[category] ?? 'enums.itemCategory.other';
 }
 
-// NotificationType: 0 TaskAssigned, 1 PickupAssigned, 2 PickupRejected,
-// 3 PickupTakenOver, 4 InvitationAccepted.
-const NOTIFICATION_ROUTES: Record<number, string> = {
-  0: '/tasks',
-  1: '/pickups',
-  2: '/pickups',
-  3: '/pickups',
-  4: '/family',
-};
+// NotificationType category: 0 Family, 1 Task, 2 Calendar, 3 Shopping, 4 FamilyVault, 5 System.
+const NOTIFICATION_TYPE_KEYS = [
+  'notifications.types.family',
+  'notifications.types.task',
+  'notifications.types.calendar',
+  'notifications.types.shopping',
+  'notifications.types.familyVault',
+  'notifications.types.system',
+];
 
-/** The in-app route a notification links to, or null when it has no destination. */
-export function notificationRoute(type: number): string | null {
-  return NOTIFICATION_ROUTES[type] ?? null;
+export function notificationTypeKey(type: number): string {
+  return NOTIFICATION_TYPE_KEYS[type] ?? 'notifications.types.system';
+}
+
+// Icon container colours, aligned with the category order above.
+const NOTIFICATION_TYPE_CLASSES = [
+  'bg-violet-50 text-violet-600',
+  'bg-amber-50 text-amber-600',
+  'bg-sky-50 text-sky-600',
+  'bg-emerald-50 text-emerald-600',
+  'bg-indigo-50 text-indigo-600',
+  'bg-gray-100 text-gray-500',
+];
+
+export function notificationTypeClasses(type: number): string {
+  return NOTIFICATION_TYPE_CLASSES[type] ?? 'bg-gray-100 text-gray-500';
 }
 
 export function eventTypeKey(type: number): string {

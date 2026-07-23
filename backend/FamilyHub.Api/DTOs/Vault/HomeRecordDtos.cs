@@ -8,6 +8,8 @@ public class CreateHomeRecordRequest
     public DateTimeOffset? IssueDate { get; set; }
     public DateTimeOffset? RenewalDate { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     public List<IFormFile>? Attachments { get; set; }
 }
 
@@ -19,6 +21,8 @@ public class UpdateHomeRecordRequest
     public DateTimeOffset? IssueDate { get; set; }
     public DateTimeOffset? RenewalDate { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     /// <summary>New files to append to the record.</summary>
     public List<IFormFile>? Attachments { get; set; }
 }
@@ -32,6 +36,8 @@ public record HomeRecordResponse(
     DateTimeOffset? IssueDate,
     DateTimeOffset? RenewalDate,
     string? Notes,
+    bool IsImportant,
+    Guid? RelatedMemberId,
     string CreatedByUserId,
     DateTimeOffset CreatedAt,
     IReadOnlyList<VaultAttachmentResponse> Attachments);

@@ -12,7 +12,8 @@ public class HomeRecordService : VaultServiceBase, IHomeRecordService
 {
     private const VaultRecordType OwnerType = VaultRecordType.Home;
 
-    public HomeRecordService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public HomeRecordService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<HomeRecordResponse>> CreateAsync(string userId, Guid familyId, CreateHomeRecordRequest request)
     {
@@ -29,6 +30,8 @@ public class HomeRecordService : VaultServiceBase, IHomeRecordService
             IssueDate = request.IssueDate,
             RenewalDate = request.RenewalDate,
             Notes = Clean(request.Notes),
+            IsImportant = request.IsImportant,
+            RelatedMemberId = request.RelatedMemberId,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -40,6 +43,8 @@ public class HomeRecordService : VaultServiceBase, IHomeRecordService
         Db.HomeRecords.Add(record);
         Db.VaultAttachments.AddRange(attachments);
         await SaveOrRollbackAsync(attachments);
+
+        await NotifyImportantRecordAsync(familyId, userId, record.Title, record.IsImportant, record.RelatedMemberId);
 
         return Result<HomeRecordResponse>.Success(ToResponse(record, attachments));
     }
@@ -84,6 +89,8 @@ public class HomeRecordService : VaultServiceBase, IHomeRecordService
         record.IssueDate = request.IssueDate;
         record.RenewalDate = request.RenewalDate;
         record.Notes = Clean(request.Notes);
+        record.IsImportant = request.IsImportant;
+        record.RelatedMemberId = request.RelatedMemberId;
 
         var built = await BuildAttachmentsAsync(userId, familyId, OwnerType, record.Id, request.Attachments);
         if (!built.Succeeded) return Result<HomeRecordResponse>.Failure(built.ErrorType!.Value, built.Error!);
@@ -120,5 +127,5 @@ public class HomeRecordService : VaultServiceBase, IHomeRecordService
 
     private HomeRecordResponse ToResponse(HomeRecord h, IEnumerable<VaultAttachment> attachments) =>
         new(h.Id, h.FamilyId, h.Title, h.Type, h.Provider, h.IssueDate, h.RenewalDate, h.Notes,
-            h.CreatedByUserId, h.CreatedAt, ToAttachmentResponses(attachments));
+            h.IsImportant, h.RelatedMemberId, h.CreatedByUserId, h.CreatedAt, ToAttachmentResponses(attachments));
 }

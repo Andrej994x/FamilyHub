@@ -14,13 +14,59 @@ namespace FamilyHub.Api.Services;
 /// </summary>
 public abstract class VaultServiceBase
 {
+    private const string VaultUrl = "/vault";
+
     protected readonly AppDbContext Db;
     protected readonly IFamilyVaultStorage Storage;
+    protected readonly INotificationService Notifications;
 
-    protected VaultServiceBase(AppDbContext db, IFamilyVaultStorage storage)
+    protected VaultServiceBase(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
     {
         Db = db;
         Storage = storage;
+        Notifications = notifications;
+    }
+
+    /// <summary>
+    /// Family Vault rule: when a record is marked important, notify the family's Owner and
+    /// Parent members plus the related person (when the record names one). The actor is
+    /// never notified. No-op for records that are not important.
+    /// </summary>
+    protected async Task NotifyImportantRecordAsync(
+        Guid familyId, string actorUserId, string recordName, bool isImportant, Guid? relatedMemberId)
+    {
+        if (!isImportant)
+        {
+            return;
+        }
+
+        var recipientIds = await Db.FamilyMembers
+            .Where(m => m.FamilyId == familyId &&
+                        (m.Role == FamilyRole.Owner || m.Role == FamilyRole.Parent))
+            .Select(m => m.UserId)
+            .ToListAsync();
+
+        if (relatedMemberId is Guid memberId)
+        {
+            var relatedUserId = await Db.FamilyMembers
+                .Where(m => m.Id == memberId && m.FamilyId == familyId)
+                .Select(m => m.UserId)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(relatedUserId))
+            {
+                recipientIds.Add(relatedUserId);
+            }
+        }
+
+        await Notifications.CreateForUsersAsync(
+            recipientIds,
+            NotificationType.FamilyVault,
+            "Important vault record",
+            $"An important record \"{recordName}\" was added to the Family Vault.",
+            familyId,
+            VaultUrl,
+            actorUserId);
     }
 
     /// <summary>

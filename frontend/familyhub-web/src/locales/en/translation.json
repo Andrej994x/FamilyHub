@@ -29,7 +29,8 @@
     "copied": "Copied!",
     "remove": "Remove",
     "optional": "optional",
-    "you": "You"
+    "you": "You",
+    "retry": "Retry"
   },
   "roles": {
     "owner": "Owner",
@@ -186,7 +187,28 @@
     "title": "Notifications",
     "subtitle": "Updates and reminders for you.",
     "empty": "You're all caught up.",
-    "markAllRead": "Mark all read"
+    "emptyUnread": "No unread notifications.",
+    "emptyRead": "No read notifications.",
+    "markAllRead": "Mark all read",
+    "deleteAllRead": "Delete read",
+    "deleteAllReadConfirm": "Delete all read notifications?",
+    "viewAll": "View all notifications",
+    "view": "View",
+    "unread": "Unread",
+    "loadError": "Could not load notifications.",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "types": {
+      "family": "Family",
+      "task": "Task",
+      "calendar": "Calendar",
+      "shopping": "Shopping",
+      "familyVault": "Family Vault",
+      "system": "System"
+    }
   },
   "vault": {
     "title": "Family Vault",

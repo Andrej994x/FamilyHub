@@ -5,4 +5,5 @@ namespace FamilyHub.Api.DTOs.Shopping;
 public record UpdateShoppingItemRequest(
     string Name,
     string? Quantity,
-    ItemCategory Category);
+    ItemCategory Category,
+    bool IsImportant = false);

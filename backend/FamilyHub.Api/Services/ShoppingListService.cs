@@ -3,17 +3,22 @@ using FamilyHub.Api.Data;
 using FamilyHub.Api.DTOs.Shopping;
 using FamilyHub.Api.Interfaces;
 using FamilyHub.Api.Models;
+using FamilyHub.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyHub.Api.Services;
 
 public class ShoppingListService : IShoppingListService
 {
-    private readonly AppDbContext _db;
+    private const string ShoppingUrl = "/shopping";
 
-    public ShoppingListService(AppDbContext db)
+    private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
+
+    public ShoppingListService(AppDbContext db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<Result<ShoppingListResponse>> CreateListAsync(
@@ -74,12 +79,20 @@ public class ShoppingListService : IShoppingListService
             Quantity = string.IsNullOrWhiteSpace(request.Quantity) ? null : request.Quantity.Trim(),
             Category = request.Category,
             IsPurchased = false,
+            IsImportant = request.IsImportant,
             AddedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _db.ShoppingItems.Add(item);
         await _db.SaveChangesAsync();
+
+        // Shopping rule: only important items raise a notification, to the whole family.
+        if (item.IsImportant)
+        {
+            await NotifyImportantItemAsync(userId, listId, "Important shopping item",
+                $"\"{item.Name}\" was added as an important shopping item.");
+        }
 
         return Result<ShoppingItemResponse>.Success(ToItemResponse(item));
     }
@@ -99,11 +112,21 @@ public class ShoppingListService : IShoppingListService
             return Result<ShoppingItemResponse>.Failure(ErrorType.NotFound, "Item not found in this list.");
         }
 
+        var becameImportant = request.IsImportant && !item.IsImportant;
+
         item.Name = request.Name.Trim();
         item.Quantity = string.IsNullOrWhiteSpace(request.Quantity) ? null : request.Quantity.Trim();
         item.Category = request.Category;
+        item.IsImportant = request.IsImportant;
 
         await _db.SaveChangesAsync();
+
+        // Notify only on the transition into "important", not on every edit of an important item.
+        if (becameImportant)
+        {
+            await NotifyImportantItemAsync(userId, listId, "Important shopping item",
+                $"\"{item.Name}\" was flagged as an important shopping item.");
+        }
 
         return Result<ShoppingItemResponse>.Success(ToItemResponse(item));
     }
@@ -214,6 +237,23 @@ public class ShoppingListService : IShoppingListService
     private Task<ShoppingItem?> GetItemAsync(Guid listId, Guid itemId) =>
         _db.ShoppingItems.FirstOrDefaultAsync(i => i.Id == itemId && i.ShoppingListId == listId);
 
+    /// <summary>Notifies the whole owning family (except the actor) about an important item.</summary>
+    private async Task NotifyImportantItemAsync(string actorUserId, Guid listId, string title, string message)
+    {
+        var familyId = await _db.ShoppingLists
+            .Where(l => l.Id == listId)
+            .Select(l => l.FamilyId)
+            .FirstOrDefaultAsync();
+
+        if (familyId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _notifications.CreateForFamilyAsync(
+            familyId, NotificationType.Shopping, title, message, ShoppingUrl, actorUserId);
+    }
+
     private static ShoppingListResponse ToListResponse(ShoppingList list) =>
         new(list.Id, list.FamilyId, list.Name, list.CreatedAt,
             list.Items
@@ -223,6 +263,6 @@ public class ShoppingListService : IShoppingListService
                 .ToList());
 
     private static ShoppingItemResponse ToItemResponse(ShoppingItem i) =>
-        new(i.Id, i.ShoppingListId, i.Name, i.Quantity, i.Category, i.IsPurchased,
+        new(i.Id, i.ShoppingListId, i.Name, i.Quantity, i.Category, i.IsPurchased, i.IsImportant,
             i.AddedByUserId, i.PurchasedByUserId, i.CreatedAt, i.PurchasedAt);
 }

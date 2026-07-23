@@ -11,7 +11,8 @@ namespace FamilyHub.Api.Services;
 /// </summary>
 public class VaultAttachmentService : VaultServiceBase, IVaultAttachmentService
 {
-    public VaultAttachmentService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public VaultAttachmentService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<VaultFile>> GetForDownloadAsync(string userId, Guid familyId, Guid attachmentId)
     {

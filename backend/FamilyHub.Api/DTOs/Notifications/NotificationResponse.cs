@@ -4,9 +4,10 @@ namespace FamilyHub.Api.DTOs.Notifications;
 
 public record NotificationResponse(
     Guid Id,
+    Guid? FamilyId,
+    NotificationType Type,
     string Title,
     string Message,
-    NotificationType Type,
-    Guid? RelatedEntityId,
+    string? RelatedUrl,
     bool IsRead,
     DateTimeOffset CreatedAt);

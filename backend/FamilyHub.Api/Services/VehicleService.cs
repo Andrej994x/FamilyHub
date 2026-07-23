@@ -12,7 +12,8 @@ public class VehicleService : VaultServiceBase, IVehicleService
 {
     private const VaultRecordType OwnerType = VaultRecordType.Vehicle;
 
-    public VehicleService(AppDbContext db, IFamilyVaultStorage storage) : base(db, storage) { }
+    public VehicleService(AppDbContext db, IFamilyVaultStorage storage, INotificationService notifications)
+        : base(db, storage, notifications) { }
 
     public async Task<Result<VehicleResponse>> CreateAsync(string userId, Guid familyId, CreateVehicleRequest request)
     {
@@ -32,6 +33,8 @@ public class VehicleService : VaultServiceBase, IVehicleService
             NextServiceDate = request.NextServiceDate,
             NextServiceMileage = request.NextServiceMileage,
             Notes = Clean(request.Notes),
+            IsImportant = request.IsImportant,
+            RelatedMemberId = request.RelatedMemberId,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -43,6 +46,8 @@ public class VehicleService : VaultServiceBase, IVehicleService
         Db.Vehicles.Add(vehicle);
         Db.VaultAttachments.AddRange(attachments);
         await SaveOrRollbackAsync(attachments);
+
+        await NotifyImportantRecordAsync(familyId, userId, vehicle.Name, vehicle.IsImportant, vehicle.RelatedMemberId);
 
         return Result<VehicleResponse>.Success(ToResponse(vehicle, attachments));
     }
@@ -90,6 +95,8 @@ public class VehicleService : VaultServiceBase, IVehicleService
         vehicle.NextServiceDate = request.NextServiceDate;
         vehicle.NextServiceMileage = request.NextServiceMileage;
         vehicle.Notes = Clean(request.Notes);
+        vehicle.IsImportant = request.IsImportant;
+        vehicle.RelatedMemberId = request.RelatedMemberId;
 
         var built = await BuildAttachmentsAsync(userId, familyId, OwnerType, vehicle.Id, request.Attachments);
         if (!built.Succeeded) return Result<VehicleResponse>.Failure(built.ErrorType!.Value, built.Error!);
@@ -126,6 +133,6 @@ public class VehicleService : VaultServiceBase, IVehicleService
 
     private VehicleResponse ToResponse(Vehicle v, IEnumerable<VaultAttachment> attachments) =>
         new(v.Id, v.FamilyId, v.Name, v.Make, v.Model, v.RegistrationNumber, v.RegistrationExpiry,
-            v.InsuranceExpiry, v.NextServiceDate, v.NextServiceMileage, v.Notes, v.CreatedByUserId,
-            v.CreatedAt, ToAttachmentResponses(attachments));
+            v.InsuranceExpiry, v.NextServiceDate, v.NextServiceMileage, v.Notes, v.IsImportant,
+            v.RelatedMemberId, v.CreatedByUserId, v.CreatedAt, ToAttachmentResponses(attachments));
 }

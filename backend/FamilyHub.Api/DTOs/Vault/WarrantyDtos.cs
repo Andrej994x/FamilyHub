@@ -8,6 +8,8 @@ public class CreateWarrantyRequest
     public DateTimeOffset? WarrantyExpiryDate { get; set; }
     public string? SerialNumber { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     public List<IFormFile>? Attachments { get; set; }
 }
 
@@ -19,6 +21,8 @@ public class UpdateWarrantyRequest
     public DateTimeOffset? WarrantyExpiryDate { get; set; }
     public string? SerialNumber { get; set; }
     public string? Notes { get; set; }
+    public bool IsImportant { get; set; }
+    public Guid? RelatedMemberId { get; set; }
     /// <summary>New files to append to the warranty (e.g. receipt).</summary>
     public List<IFormFile>? Attachments { get; set; }
 }
@@ -32,6 +36,8 @@ public record WarrantyResponse(
     DateTimeOffset? WarrantyExpiryDate,
     string? SerialNumber,
     string? Notes,
+    bool IsImportant,
+    Guid? RelatedMemberId,
     string CreatedByUserId,
     DateTimeOffset CreatedAt,
     IReadOnlyList<VaultAttachmentResponse> Attachments);

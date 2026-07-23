@@ -23,6 +23,9 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
             .IsRequired()
             .HasMaxLength(1000);
 
+        builder.Property(n => n.RelatedUrl)
+            .HasMaxLength(500);
+
         builder.Property(n => n.Type)
             .IsRequired()
             .HasConversion<string>()
@@ -39,5 +42,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
 
         // Supports listing and the unread-count query.
         builder.HasIndex(n => new { n.UserId, n.IsRead });
+
+        // Supports a future push worker scanning for undelivered notifications.
+        builder.HasIndex(n => n.IsPushSent);
     }
 }
