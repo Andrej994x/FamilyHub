@@ -11,10 +11,15 @@ namespace FamilyHub.Api.Services;
 public class NotificationService : INotificationService
 {
     private readonly AppDbContext _db;
+    private readonly IPushNotificationService _push;
+    private readonly ILogger<NotificationService> _logger;
 
-    public NotificationService(AppDbContext db)
+    public NotificationService(
+        AppDbContext db, IPushNotificationService push, ILogger<NotificationService> logger)
     {
         _db = db;
+        _push = push;
+        _logger = logger;
     }
 
     // ---- Query / read-state ----
@@ -137,9 +142,10 @@ public class NotificationService : INotificationService
         }
 
         var now = DateTimeOffset.UtcNow;
+        var created = new List<Notification>(recipients.Count);
         foreach (var recipient in recipients)
         {
-            _db.Notifications.Add(new Notification
+            var notification = new Notification
             {
                 Id = Guid.NewGuid(),
                 UserId = recipient,
@@ -151,9 +157,54 @@ public class NotificationService : INotificationService
                 IsRead = false,
                 CreatedAt = now,
                 IsPushSent = false,
-            });
+            };
+            _db.Notifications.Add(notification);
+            created.Add(notification);
         }
 
+        // Persist the in-app notifications first; these are the source of truth and must not be
+        // lost if a subsequent push send fails.
         await _db.SaveChangesAsync();
+
+        await DispatchPushAsync(created);
+    }
+
+    /// <summary>
+    /// Best-effort push fan-out for freshly created notifications. Delivery runs inline and is
+    /// deliberately non-fatal: a failure here never affects the saved in-app notifications.
+    /// (A production system would offload this to a background queue.)
+    /// </summary>
+    private async Task DispatchPushAsync(List<Notification> notifications)
+    {
+        var anyPushed = false;
+
+        foreach (var notification in notifications)
+        {
+            try
+            {
+                var payload = new PushPayload(
+                    notification.Title,
+                    notification.Message,
+                    notification.RelatedUrl,
+                    notification.Id.ToString());
+
+                var delivered = await _push.SendToUserAsync(notification.UserId, payload);
+                if (delivered > 0)
+                {
+                    notification.IsPushSent = true;
+                    notification.PushSentAt = DateTimeOffset.UtcNow;
+                    anyPushed = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Push dispatch failed for notification {NotificationId}.", notification.Id);
+            }
+        }
+
+        if (anyPushed)
+        {
+            await _db.SaveChangesAsync();
+        }
     }
 }

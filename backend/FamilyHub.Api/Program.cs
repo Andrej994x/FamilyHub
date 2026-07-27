@@ -16,6 +16,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using WebPush;
 
 // Bootstrap logger so failures during startup are captured before the host is built.
 Log.Logger = new LoggerConfiguration()
@@ -103,6 +104,22 @@ try
     {
         builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
     }
+
+    // Push notifications (Web Push / VAPID): deliver real pushes when a key pair is configured,
+    // otherwise log the payload (development), mirroring the email sender's behaviour.
+    builder.Services.Configure<PushSettings>(builder.Configuration.GetSection("Push"));
+    var pushSettings = builder.Configuration.GetSection("Push").Get<PushSettings>() ?? new PushSettings();
+    builder.Services.AddSingleton<WebPushClient>();
+    if (pushSettings.IsConfigured)
+    {
+        builder.Services.AddScoped<IPushSender, WebPushSender>();
+    }
+    else
+    {
+        builder.Services.AddScoped<IPushSender, LoggingPushSender>();
+    }
+    builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
+    builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IAuthService, AuthService>();

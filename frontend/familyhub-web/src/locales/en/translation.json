@@ -208,6 +208,18 @@
       "shopping": "Shopping",
       "familyVault": "Family Vault",
       "system": "System"
+    },
+    "push": {
+      "title": "Push notifications",
+      "descriptionOn": "This device will receive push notifications.",
+      "descriptionOff": "Get notified on this device even when FamilyHub is closed.",
+      "unsupported": "This browser doesn't support push notifications.",
+      "deniedHint": "Notifications are blocked. Allow them for this site in your browser settings, then try again.",
+      "notConfigured": "Push notifications aren't available right now.",
+      "error": "Something went wrong. Please try again.",
+      "iosHint": "On iPhone, add FamilyHub to your Home Screen first, then enable notifications.",
+      "blockedLabel": "Blocked",
+      "unavailableLabel": "Unavailable"
     }
   },
   "pwa": {

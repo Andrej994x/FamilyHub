@@ -35,6 +35,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+
     public DbSet<FamilyDocument> FamilyDocuments => Set<FamilyDocument>();
 
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();

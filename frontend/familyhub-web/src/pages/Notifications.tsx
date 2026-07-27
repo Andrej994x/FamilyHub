@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationItem } from '../components/NotificationItem';
+import { PushNotificationToggle } from '../components/PushNotificationToggle';
 import type { NotificationResponse } from '../types';
 
 type Tab = 'all' | 'unread' | 'read';
@@ -97,6 +98,11 @@ export default function Notifications() {
           )}
         </div>
       </header>
+
+      {/* Push notification settings */}
+      <div className="mb-4">
+        <PushNotificationToggle />
+      </div>
 
       {/* Tabs */}
       <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1">

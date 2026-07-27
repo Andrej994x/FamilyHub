@@ -9,12 +9,11 @@
  *    and show a branded offline page when even the shell is unavailable.
  *  - Support user-controlled updates: a new worker waits until the app tells it to
  *    activate (see the SKIP_WAITING message), which powers the "new version" prompt.
- *
- * Push notifications are intentionally NOT handled yet.
+ *  - Receive push notifications and route the app to the right page when one is tapped.
  */
 
 // Bump this whenever the precached shell changes so clients pick up a new worker.
-const CACHE = 'familyhub-v2';
+const CACHE = 'familyhub-v3';
 
 // The minimal shell needed to boot the app (and an offline fallback). Hashed build assets
 // under /assets are cached at runtime instead (their names are not known ahead of time).
@@ -44,6 +43,56 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// --- Push notifications ---
+
+self.addEventListener('push', (event) => {
+  // Payload shape from the backend: { title, body, url, tag }.
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { body: event.data.text() };
+    }
+  }
+
+  const title = payload.title || 'FamilyHub';
+  const options = {
+    body: payload.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    // Same tag collapses/replaces a prior notification; unique tag shows each separately.
+    tag: payload.tag || undefined,
+    data: { url: payload.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetPath = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = new URL(targetPath, self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const existing = clientList.find((client) => new URL(client.url).origin === self.location.origin);
+
+      if (existing) {
+        await existing.focus();
+        // Ask the running app to route in place (smooth SPA navigation, no reload).
+        existing.postMessage({ type: 'PUSH_NAVIGATE', url: targetPath });
+        return;
+      }
+
+      // No window open — open one directly at the target route.
+      await self.clients.openWindow(targetUrl);
+    })(),
+  );
 });
 
 self.addEventListener('activate', (event) => {
