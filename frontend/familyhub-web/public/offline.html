@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4f46e5" />
+    <title>FamilyHub — Offline</title>
+    <style>
+      :root {
+        --brand: #4f46e5;
+        --ink: #111827;
+        --muted: #6b7280;
+        --bg: #f9fafb;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      }
+      .card {
+        width: 100%;
+        max-width: 360px;
+        text-align: center;
+      }
+      .logo {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 20px;
+        border-radius: 18px;
+        display: block;
+      }
+      h1 { font-size: 1.25rem; margin: 0 0 8px; }
+      p { color: var(--muted); font-size: 0.95rem; line-height: 1.5; margin: 0 0 24px; }
+      button {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        background: var(--brand);
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 600;
+        padding: 12px 20px;
+        border-radius: 12px;
+        width: 100%;
+      }
+      button:active { opacity: 0.9; }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink: #f3f4f6; --muted: #9ca3af; --bg: #0b0f19; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img class="logo" src="/icons/icon-192.png" alt="FamilyHub" />
+      <h1 id="title">You're offline</h1>
+      <p id="message">
+        FamilyHub can't reach the network right now. Check your connection and try again — your
+        data will be here when you're back online.
+      </p>
+      <button id="retry" type="button" onclick="location.reload()">Try again</button>
+    </div>
+
+    <script>
+      // Match the app's selected language (stored by the SPA) so the fallback feels native.
+      (function () {
+        var strings = {
+          en: {
+            docTitle: 'FamilyHub — Offline',
+            title: "You're offline",
+            message:
+              "FamilyHub can't reach the network right now. Check your connection and try again — your data will be here when you're back online.",
+            retry: 'Try again',
+          },
+          mk: {
+            docTitle: 'FamilyHub — Офлајн',
+            title: 'Немате интернет',
+            message:
+              'FamilyHub моментално не може да се поврзе. Проверете ја врската и обидете се повторно — вашите податоци ќе ве чекаат кога ќе се вратите онлајн.',
+            retry: 'Обиди се повторно',
+          },
+        };
+        var lang = 'en';
+        try {
+          var stored = localStorage.getItem('familyhub_language');
+          if (stored && strings[stored]) lang = stored;
+        } catch (e) {
+          /* localStorage may be unavailable; fall back to English. */
+        }
+        var s = strings[lang];
+        document.documentElement.lang = lang;
+        document.title = s.docTitle;
+        document.getElementById('title').textContent = s.title;
+        document.getElementById('message').textContent = s.message;
+        document.getElementById('retry').textContent = s.retry;
+      })();
+    </script>
+  </body>
+</html>

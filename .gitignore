@@ -28,3 +28,6 @@ Thumbs.db
 .env
 .env.*
 appsettings.*.local.json
+
+# Backend-hosted PWA build output (frontend dist copied for single-origin hosting)
+backend/FamilyHub.Api/wwwroot/

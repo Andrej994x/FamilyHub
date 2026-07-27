@@ -210,6 +210,18 @@
       "system": "System"
     }
   },
+  "pwa": {
+    "install": {
+      "message": "Install FamilyHub for quick access.",
+      "action": "Install",
+      "dismiss": "Not now"
+    },
+    "update": {
+      "message": "A new version of FamilyHub is available.",
+      "action": "Reload",
+      "reloading": "Reloading…"
+    }
+  },
   "vault": {
     "title": "Family Vault",
     "subtitle": "Your family's important documents and records, in one place.",

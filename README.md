@@ -63,6 +63,36 @@ npm run dev      # start the Vite dev server
 npm run build    # type-check and produce a production build
 ```
 
+## Progressive Web App (PWA)
+
+The frontend is an installable PWA (web app manifest + service worker + icons). Push
+notifications are intentionally **not** implemented yet.
+
+### Local / same-origin hosting
+For an installable experience the app is served from the **same origin** as the API. Copy the
+built frontend into the API's `wwwroot`, then run the API:
+
+```bash
+cd frontend/familyhub-web && npm run build          # outputs dist/
+cp -r dist/* ../../backend/FamilyHub.Api/wwwroot/    # single-origin hosting
+cd ../../backend/FamilyHub.Api && dotnet run
+```
+
+When `wwwroot/index.html` is present the API serves the app and falls back to `index.html`
+for client-side deep links (so refresh/deep links never 404); unknown `/api/*` paths still
+return real JSON 404s. When it is absent the project stays a pure API (the default dev flow,
+with the Vite dev server on `:5173` talking to the API on `:5271`). `http://localhost` is a
+secure context, so the PWA installs and the service worker runs without a certificate.
+
+### Production notes
+- **CORS** is environment-based (`Program.cs`). Development reflects any origin; production
+  allows only the origins in `Cors:AllowedOrigins` (appsettings). With same-origin hosting no
+  CORS is involved at all.
+- **HTTPS**: `UseHttpsRedirection` + HSTS (production only). Behind a TLS-terminating reverse
+  proxy, forwarded headers (`X-Forwarded-Proto`/`For`) are honoured so the real scheme is used.
+- **Auth** is stateless JWT bearer tokens (no cookies), which works cleanly from installed
+  PWAs and mobile browsers and survives refreshes/deep links via `localStorage`.
+
 ## Status
 Scaffolding complete — dependencies installed and both the frontend and backend
 build successfully. Business features are intentionally not implemented yet.
