@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationItem } from '../components/NotificationItem';
-import { PushNotificationToggle } from '../components/PushNotificationToggle';
 import type { NotificationResponse } from '../types';
 
 type Tab = 'all' | 'unread' | 'read';
+
+/** How many notifications to show per page (keeps long lists manageable). */
+const PAGE_SIZE = 10;
 
 export default function Notifications() {
   const { t } = useTranslation();
@@ -24,6 +26,7 @@ export default function Notifications() {
   } = useNotifications();
 
   const [tab, setTab] = useState<Tab>('all');
+  const [page, setPage] = useState(1);
 
   const readCount = notifications.length - unreadCount;
 
@@ -37,6 +40,15 @@ export default function Notifications() {
         return notifications;
     }
   }, [notifications, tab]);
+
+  // Reset to the first page whenever the tab changes.
+  useEffect(() => {
+    setPage(1);
+  }, [tab]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages); // clamp if the list shrank
+  const pageItems = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleActivate = (notification: NotificationResponse) => {
     if (!notification.isRead) {
@@ -99,11 +111,6 @@ export default function Notifications() {
         </div>
       </header>
 
-      {/* Push notification settings */}
-      <div className="mb-4">
-        <PushNotificationToggle />
-      </div>
-
       {/* Tabs */}
       <div className="mb-4 flex gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1">
         {tabs.map((item) => (
@@ -143,16 +150,49 @@ export default function Notifications() {
           {emptyMessage}
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {visible.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onActivate={handleActivate}
-              onDelete={(n) => void deleteOne(n.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            {pageItems.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onActivate={handleActivate}
+                onDelete={(n) => void deleteOne(n.id)}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <nav
+              className="mt-4 flex items-center justify-between gap-3"
+              aria-label={t('notifications.pagination.label')}
+            >
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {t('notifications.pagination.prev')}
+              </button>
+              <span className="text-xs text-gray-500">
+                {t('notifications.pagination.status', {
+                  page: currentPage,
+                  total: totalPages,
+                  count: visible.length,
+                })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                {t('notifications.pagination.next')}
+              </button>
+            </nav>
+          )}
+        </>
       )}
     </div>
   );

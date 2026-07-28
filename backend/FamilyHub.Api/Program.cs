@@ -121,6 +121,12 @@ try
     builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
     builder.Services.AddScoped<IPushSubscriptionService, PushSubscriptionService>();
 
+    // Reminder engine: a daily background pass over important dates that delivers due reminders.
+    builder.Services.Configure<ReminderSettings>(builder.Configuration.GetSection("Reminders"));
+    builder.Services.AddScoped<IReminderService, ReminderService>();
+    builder.Services.AddScoped<IReminderPreferenceService, ReminderPreferenceService>();
+    builder.Services.AddHostedService<ReminderBackgroundService>();
+
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IFamilyService, FamilyService>();

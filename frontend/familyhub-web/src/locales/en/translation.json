@@ -11,6 +11,7 @@
     "family": "Family",
     "pickups": "Pickups",
     "vault": "Family Vault",
+    "settings": "Settings",
     "more": "More"
   },
   "common": {
@@ -201,6 +202,12 @@
       "unread": "Unread",
       "read": "Read"
     },
+    "pagination": {
+      "label": "Notifications pages",
+      "prev": "Previous",
+      "next": "Next",
+      "status": "Page {{page}} of {{total}} · {{count}} total"
+    },
     "types": {
       "family": "Family",
       "task": "Task",
@@ -232,6 +239,54 @@
       "message": "A new version of FamilyHub is available.",
       "action": "Reload",
       "reloading": "Reloading…"
+    }
+  },
+  "settings": {
+    "title": "System settings",
+    "subtitle": "Manage notifications, reminders and app preferences.",
+    "language": {
+      "title": "Language",
+      "subtitle": "Choose your preferred language."
+    },
+    "reminders": {
+      "title": "Reminders",
+      "subtitle": "Choose when you get reminded, per category."
+    },
+    "account": {
+      "title": "Account",
+      "subtitle": "Signed in as {{name}}."
+    }
+  },
+  "reminders": {
+    "title": "Reminder settings",
+    "subtitle": "Choose when you get reminded, for each category.",
+    "loadError": "Could not load reminder settings.",
+    "saveError": "Could not save. Please try again.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "reset": "Reset to defaults",
+    "resetConfirm": "Reset all reminder settings to defaults?",
+    "usingDefaults": "Using defaults",
+    "atLeastOne": "Keep at least one lead time, or turn the category off.",
+    "off": "Off",
+    "dayUnit": "d",
+    "sameDayShort": "Same day",
+    "categories": {
+      "tasks": "Tasks",
+      "calendarEvents": "Calendar events",
+      "documents": "Documents",
+      "vehicles": "Vehicles",
+      "pets": "Pets",
+      "home": "Home",
+      "warranties": "Warranties",
+      "otherVaultItems": "Other vault items"
+    },
+    "offset": {
+      "d30": "30 days before",
+      "d7": "7 days before",
+      "d1": "1 day before",
+      "d0": "Same day"
     }
   },
   "vault": {

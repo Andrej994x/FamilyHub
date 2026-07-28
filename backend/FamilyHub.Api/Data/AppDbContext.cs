@@ -37,6 +37,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
+    public DbSet<ReminderHistory> ReminderHistory => Set<ReminderHistory>();
+
+    public DbSet<UserReminderPreference> UserReminderPreferences => Set<UserReminderPreference>();
+
     public DbSet<FamilyDocument> FamilyDocuments => Set<FamilyDocument>();
 
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();

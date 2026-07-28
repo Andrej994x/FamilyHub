@@ -4,6 +4,7 @@ using FamilyHub.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyHub.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260727135424_AddReminderHistory")]
+    partial class AddReminderHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -761,10 +764,6 @@ namespace FamilyHub.Api.Data.Migrations
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("RecipientUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTimeOffset>("SentAt")
                         .HasColumnType("datetimeoffset");
 
@@ -778,7 +777,7 @@ namespace FamilyHub.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RecipientUserId", "SourceType", "SourceId", "DateKind", "DueDate", "DaysBefore")
+                    b.HasIndex("SourceType", "SourceId", "DateKind", "DueDate", "DaysBefore")
                         .IsUnique();
 
                     b.ToTable("ReminderHistory", (string)null);
@@ -861,42 +860,6 @@ namespace FamilyHub.Api.Data.Migrations
                     b.HasIndex("FamilyId");
 
                     b.ToTable("ShoppingLists", (string)null);
-                });
-
-            modelBuilder.Entity("FamilyHub.Api.Models.UserReminderPreference", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ReminderOffsetsDays")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Category")
-                        .IsUnique();
-
-                    b.ToTable("UserReminderPreferences", (string)null);
                 });
 
             modelBuilder.Entity("FamilyHub.Api.Models.VaultAttachment", b =>
@@ -1427,17 +1390,6 @@ namespace FamilyHub.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Family");
-                });
-
-            modelBuilder.Entity("FamilyHub.Api.Models.UserReminderPreference", b =>
-                {
-                    b.HasOne("FamilyHub.Api.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FamilyHub.Api.Models.VaultAttachment", b =>

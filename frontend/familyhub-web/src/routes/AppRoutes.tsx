@@ -14,6 +14,8 @@ import Shopping from '../pages/Shopping';
 import FamilyMembersPage from '../pages/FamilyMembersPage';
 import Pickups from '../pages/Pickups';
 import Notifications from '../pages/Notifications';
+import ReminderSettings from '../pages/ReminderSettings';
+import SystemSettings from '../pages/SystemSettings';
 import FamilyVault from '../pages/FamilyVault';
 import AcceptInvitation from '../pages/AcceptInvitation';
 
@@ -46,6 +48,8 @@ export function AppRoutes() {
               <Route path="/pickups" element={<Pickups />} />
               <Route path="/vault" element={<FamilyVault />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/reminders" element={<ReminderSettings />} />
+              <Route path="/settings" element={<SystemSettings />} />
             </Route>
           </Route>
         </Route>
