@@ -343,3 +343,7 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Makes the compiler-generated Program class public so integration tests can host the API with
+// WebApplicationFactory<Program>. It adds no behavior.
+public partial class Program { }
