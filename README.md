@@ -1,7 +1,11 @@
 # FamilyHub
 
-A full-stack starter project. This repository contains the scaffolding only — the
-projects build and run, but no business features are implemented yet.
+A family organizer PWA: shared tasks, calendar, shopping lists, school pickups, a Family Vault
+for important records, in-app and push notifications, and reminders. It is built as a React +
+TypeScript frontend on an ASP.NET Core 8 + SQL Server backend.
+
+- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Engineering conventions and workflow (for people and AI agents): [AGENTS.md](AGENTS.md)
 
 ## Tech Stack
 
@@ -31,11 +35,13 @@ FamilyHub/
 ├── backend/
 │   ├── FamilyHub.sln
 │   ├── global.json             # pins the .NET 8 SDK
-│   └── FamilyHub.Api/          # ASP.NET Core 8 Web API
-├── database/
-│   └── scripts/                # SQL scripts / EF migration output
-├── docs/                       # project documentation
-├── .gitignore
+│   └── FamilyHub.Api/          # ASP.NET Core 8 Web API (EF Core migrations in Data/Migrations)
+├── docs/
+│   └── ARCHITECTURE.md         # system architecture
+├── .github/                    # CI workflow and PR template
+├── AGENTS.md                   # engineering conventions (shared by people and AI agents)
+├── CLAUDE.md                   # Claude Code-specific instructions
+├── dotnet-tools.json           # pinned dotnet-ef
 └── README.md
 ```
 
@@ -141,5 +147,8 @@ secure context, so the PWA installs and the service worker runs without a certif
   PWAs and mobile browsers and survives refreshes/deep links via `localStorage`.
 
 ## Status
-Scaffolding complete — dependencies installed and both the frontend and backend
-build successfully. Business features are intentionally not implemented yet.
+The core features are implemented: families and invitations, tasks, calendar, shopping, pickups,
+the Family Vault, notifications with Web Push, and reminders. CI covers build, lint, migrations,
+i18n parity and secret scanning. There are no automated tests yet. See
+[docs/ARCHITECTURE.md → Known security risks](docs/ARCHITECTURE.md#12-known-security-risks-separate-s3-review-required)
+and [Known gaps](docs/ARCHITECTURE.md#13-known-gaps-observed-in-the-code).
