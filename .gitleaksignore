@@ -1,0 +1,4 @@
+# Historical findings whose secrets have been rotated and removed from tracked files
+# (chore/secrets-remediation). Entries are gitleaks fingerprints (commit:file:rule:line) and
+# contain no secret values. Never add a fingerprint for a secret that is still in use.
+6dcd57de7473cc8738c877425e5dd99869cdea62:backend/FamilyHub.Api/appsettings.Development.json:generic-api-key:11

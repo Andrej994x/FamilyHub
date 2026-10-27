@@ -59,6 +59,16 @@ try
     // --- JWT authentication ---
     var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
         ?? throw new InvalidOperationException("The 'Jwt' configuration section is missing.");
+
+    // The signing key is never committed: it comes from user-secrets (development) or the
+    // Jwt__Key environment variable. HS256 needs at least 256 bits, so fail fast otherwise.
+    if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
+    {
+        throw new InvalidOperationException(
+            "Jwt:Key is missing or shorter than 32 bytes. Set it with 'dotnet user-secrets set \"Jwt:Key\" <value>' " +
+            "(development) or the Jwt__Key environment variable.");
+    }
+
     builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
     builder.Services
