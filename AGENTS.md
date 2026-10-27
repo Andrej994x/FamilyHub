@@ -15,7 +15,7 @@ Run from the repository root unless a directory is given.
 |---|---|
 | Restore pinned tools (`dotnet-ef` 8.0.11) | `dotnet tool restore` |
 | Backend build (as CI) | `cd backend && dotnet build FamilyHub.sln -c Release -warnaserror` |
-| Run API (Development) | `cd backend && dotnet run --project FamilyHub.Api --launch-profile http` |
+| Run API (Development; migrates and seeds the configured DB, so Claude Code asks for approval first) | `cd backend && dotnet run --project FamilyHub.Api --launch-profile http` |
 | Model changed without a migration? | `cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations has-pending-model-changes` (add `--no-build` while a local API process locks `bin/Debug`) |
 | Add a migration | `cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations add <Name>` |
 | Frontend install / lint / build | `cd frontend/familyhub-web && npm ci && npm run lint && npm run build` |
@@ -95,7 +95,7 @@ Classify every task before starting. The highest matching level wins; if unsure,
 1. **Backend build**: Release build with warnings as errors.
 2. **EF Core migrations**: fails if the model has changes without a migration. Otherwise it applies all migrations to an empty SQL Server 2022 and re-runs the idempotent script.
 3. **Frontend build & lint**: `npm ci`, oxlint, `tsc -b`, Vite build.
-4. **i18n parity (en/mk)**: identical keys and placeholders, no empty values.
+4. **i18n parity (en/mk)**: identical keys and placeholders, no empty values. This job also runs the Claude Code guard tests (`node --test .claude/hooks/guard.test.mjs`).
 5. **Secret scan (gitleaks)**: full git history, with `.gitleaksignore` for rotated findings only.
 
 Renaming a CI job breaks the required check in the ruleset. Treat job names as part of the contract (S2).

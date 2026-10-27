@@ -17,7 +17,7 @@ The shared conventions, risk levels (S0–S3), required gates and approval rules
 ## Guardrails (`.claude/`)
 `.claude/settings.json` registers a deterministic PreToolUse guard (`.claude/hooks/guard.mjs`) and permission rules:
 - **Denied:** destructive Git, database and secret operations, such as force push, `reset --hard`, `clean -f`, `ef database drop` and secret stores.
-- **Prompted:** actions that need owner approval, such as merging a PR, deleting branches, `ef database update`, SQL writes and user-secrets changes.
+- **Prompted:** actions that need owner approval, such as merging a PR, deleting branches, starting the FamilyHub API (it migrates and seeds the database), `ef database update`, SQL writes and user-secrets changes.
 
 A block includes a `FamilyHub guard:` reason. Follow its suggested alternative or ask the owner. Never work around a block with a different spelling of the same command. These are guardrails, not a sandbox. See [.claude/README.md](.claude/README.md) for every rule, its trade-offs and its limitations.
 

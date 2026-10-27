@@ -23,7 +23,7 @@ const ALLOWED_BASH = [
   'git commit -m "docs: explain why git reset --hard and git push --force are blocked"',
   "git commit -q -F - <<'EOF'\nci: mention git clean -fdx and DROP TABLE in a message\n\nrm -rf .git\nEOF",
   'cd backend && dotnet build FamilyHub.sln -c Release -warnaserror',
-  'dotnet tool restore', 'dotnet run --project FamilyHub.Api --launch-profile http',
+  'dotnet tool restore',
   'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations has-pending-model-changes --no-build',
   'dotnet tool run dotnet-ef migrations add AddThing', 'dotnet ef migrations script --idempotent -o out.sql',
   'cd frontend/familyhub-web && npm ci && npm run lint && npm run build', 'npm run i18n:check',
@@ -94,6 +94,72 @@ for (const [tool, command, expected] of cases) {
     assert.equal(action(decision), expected, decision?.reason);
   });
 }
+
+// FamilyHub API startup (migrates + seeds the database in Development) → ask. The hook input's
+// `cwd` and earlier `cd`/`Set-Location` segments decide whether a bare `dotnet run` targets the API.
+const REPO = 'C:\\dev\\FamilyHub';
+const BACKEND = `${REPO}\\backend`;
+const API_DIR = `${BACKEND}\\FamilyHub.Api`;
+const inDir = (tool_name, cwd, command) => action(evaluate({ tool_name, cwd, tool_input: { command } }));
+
+const API_START_ASK = [
+  ['Bash', REPO, 'cd backend && dotnet run --project FamilyHub.Api --launch-profile http'],
+  ['Bash', REPO, 'dotnet run --project backend/FamilyHub.Api/FamilyHub.Api.csproj'],
+  ['Bash', BACKEND, 'dotnet run --project=FamilyHub.Api'],
+  ['Bash', API_DIR, 'dotnet run'],
+  ['Bash', API_DIR, 'dotnet run --launch-profile https'],
+  ['Bash', REPO, 'cd backend/FamilyHub.Api && dotnet run'],
+  ['Bash', REPO, 'cd /c/dev/FamilyHub/backend/FamilyHub.Api && ASPNETCORE_ENVIRONMENT=Development dotnet run --no-launch-profile'],
+  ['Bash', API_DIR, 'dotnet watch'],
+  ['Bash', API_DIR, 'dotnet watch run'],
+  ['Bash', REPO, 'dotnet watch --project backend/FamilyHub.Api run'],
+  ['Bash', REPO, 'nohup dotnet run --project backend/FamilyHub.Api > api.log 2>&1 &'],
+  ['Bash', API_DIR, 'dotnet bin/Debug/net8.0/FamilyHub.Api.dll --urls http://localhost:5280'],
+  ['Bash', null, 'dotnet exec /tmp/out/FamilyHub.Api.dll'],
+  ['Bash', API_DIR, './bin/Debug/net8.0/FamilyHub.Api.exe'],
+  ['Bash', REPO, 'bash -c "cd backend/FamilyHub.Api && dotnet run"'],
+  ['PowerShell', REPO, 'Set-Location backend\\FamilyHub.Api; dotnet run'],
+  ['PowerShell', REPO, 'dotnet run --project .\\backend\\FamilyHub.Api\\'],
+  ['PowerShell', API_DIR, '& .\\bin\\Debug\\net8.0\\FamilyHub.Api.exe'],
+  ['PowerShell', REPO, "Start-Process dotnet -ArgumentList 'run','--project','backend\\FamilyHub.Api'"],
+  ['PowerShell', REPO, 'Start-Process -FilePath .\\backend\\FamilyHub.Api\\bin\\Debug\\net8.0\\FamilyHub.Api.exe'],
+  ['PowerShell', REPO, "Start-Process dotnet -ArgumentList 'run' -WorkingDirectory backend\\FamilyHub.Api"],
+];
+
+const API_START_ALLOWED = [
+  ['Bash', API_DIR, 'dotnet build'], ['Bash', API_DIR, 'dotnet build -c Release'], ['Bash', API_DIR, 'dotnet test'],
+  ['Bash', API_DIR, 'dotnet restore'], ['Bash', API_DIR, 'dotnet publish -c Release -o out'],
+  ['Bash', API_DIR, 'dotnet tool run dotnet-ef migrations list --no-build'],
+  ['Bash', API_DIR, 'dotnet tool run dotnet-ef migrations has-pending-model-changes'],
+  ['Bash', API_DIR, 'dotnet ef migrations script --idempotent -o out.sql'],
+  ['Bash', API_DIR, 'dotnet watch build'], ['Bash', API_DIR, 'dotnet watch test'],
+  ['Bash', REPO, 'dotnet run --project tools/Seeder'], ['Bash', REPO, 'dotnet run'],
+  ['Bash', REPO, 'dotnet run --project backend/FamilyHub.Api.Tests'],
+  ['Bash', API_DIR, 'cd .. && dotnet run --project OtherApp'], ['Bash', API_DIR, 'cd ../.. && dotnet run'],
+  ['Bash', REPO, 'cd frontend/familyhub-web && npm run dev'],
+  ['Bash', REPO, 'ls backend/FamilyHub.Api/bin/Debug/net8.0'], ['Bash', REPO, 'git log -- backend/FamilyHub.Api'],
+  ['Bash', null, 'dotnet run'],
+  ['PowerShell', API_DIR, 'dotnet build'], ['PowerShell', REPO, 'Start-Process notepad'],
+  ['PowerShell', REPO, 'Get-Process FamilyHub.Api'],
+];
+
+for (const [tool, cwd, command] of API_START_ASK) {
+  test(`api start ask (${tool}, cwd=${cwd ?? 'unknown'}): ${command}`, () => {
+    const decision = evaluate({ tool_name: tool, cwd, tool_input: { command } });
+    assert.equal(action(decision), 'ask', decision?.reason);
+    assert.match(decision.reason, /Starting the FamilyHub API/);
+  });
+}
+for (const [tool, cwd, command] of API_START_ALLOWED) {
+  test(`api start not prompted (${tool}, cwd=${cwd ?? 'unknown'}): ${command}`, () => {
+    assert.equal(inDir(tool, cwd, command), 'none');
+  });
+}
+test('api start: a deny in the same command still wins over the startup ask', () => {
+  assert.equal(inDir('Bash', API_DIR, 'dotnet run; git reset --hard'), 'deny');
+  assert.equal(inDir('Bash', API_DIR, 'dotnet ef database drop'), 'deny');
+  assert.equal(inDir('PowerShell', API_DIR, 'dotnet run; git push --force'), 'deny');
+});
 
 // File edits (Write / Edit / MultiEdit)
 const edit = (tool_name, tool_input) => action(evaluate({ tool_name, tool_input }));

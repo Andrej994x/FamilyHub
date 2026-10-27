@@ -44,9 +44,22 @@ It also looks inside `bash -c`, `sh -c`, `pwsh -Command`, `cmd /c`, `eval` and `
 | GitHub CLI | `gh repo delete` | `gh pr merge`; `gh repo edit`/`rename`/`archive`; `gh secret`/`variable set`/`delete`; `gh release delete`; `gh api` with a non-GET method or fields (except read-only GraphQL queries); `gh auth token` |
 | Secrets | `dotnet user-secrets clear` | `dotnet user-secrets set`/`remove`/`init`/`list` (`list` prints secret values); any command naming the user-secrets directory; writes to `.gitleaksignore` |
 | Database | `dotnet ef database drop`, `dotnet ef database update 0`, SQL containing `DROP`/`TRUNCATE`/`SHUTDOWN` (`sqlcmd -Q`, `Invoke-Sqlcmd -Query`, heredoc input), `sqllocaldb delete` | `dotnet ef database update`, `dotnet ef migrations remove`, SQL with `INSERT`/`UPDATE`/`DELETE`/`MERGE`/`ALTER`/`CREATE`/`EXEC`/…, `sqlcmd -i` scripts, `bcp … in` |
+| API startup | — | Starting the FamilyHub API (details below) |
 | Guard config | — | deleting anything under `.claude/` |
 
-Read-only `SELECT` queries, `git status`/`diff`/`log`, normal `push -u`, builds, lint, tests, `gh pr create`/`view`/`edit`, `dotnet ef migrations add`/`script`/`has-pending-model-changes` and `dotnet run` are **not** affected.
+Read-only `SELECT` queries, `git status`/`diff`/`log`, normal `push -u`, builds, lint, tests, `gh pr create`/`view`/`edit`, `dotnet ef migrations add`/`script`/`has-pending-model-changes` and `dotnet run` of other projects are **not** affected.
+
+### FamilyHub API startup (`ask`)
+In Development, API startup **applies EF Core migrations and seeds sample data** (`DbSeeder`) into the configured database. Starting it therefore needs owner approval.
+
+**Asks for approval:**
+- **`dotnet run`** when it targets the API, either through `--project`/`-p` (a path ending in `FamilyHub.Api` or `FamilyHub.Api.csproj`), or by running in `backend/FamilyHub.Api` with no `--project`. The directory comes from the hook's `cwd` field plus earlier `cd`/`pushd`/`Set-Location` segments of the same command.
+- **`dotnet watch`** with no command, or `dotnet watch run`, under the same rules.
+- **Built output:** `dotnet [exec] …/FamilyHub.Api.dll`, and the apphost `FamilyHub.Api`/`FamilyHub.Api.exe`, including PowerShell `& .\…\FamilyHub.Api.exe`.
+- **PowerShell `Start-Process`** for any of the above. The guard re-checks `-FilePath` with `-ArgumentList` and `-WorkingDirectory`.
+- **Wrapped forms:** `nohup`, `timeout`, `ASPNETCORE_ENVIRONMENT=… dotnet run`, `bash -c "…"`, and `pwsh -Command "…"`.
+
+**Not prompted:** `dotnet build`/`test`/`restore`/`publish`, `dotnet watch build`/`test`, EF Core commands (the EF tools stop before the seeding code runs), `dotnet run` of other projects (including `FamilyHub.Api.Tests`), and `dotnet run` outside the API directory.
 
 ### File edits it checks (Write, Edit, MultiEdit)
 | Target | Decision |
@@ -70,10 +83,10 @@ Read-only `SELECT` queries, `git status`/`diff`/`log`, normal `push -u`, builds,
 - `dotnet user-secrets list` asks, because it prints secret values. Checking which keys exist now needs one approval.
 - Discarding working-tree changes (`git checkout -- f`, `git restore f`) asks. Reverting an agent's own edits needs one approval; `git stash` is the unprompted alternative.
 - `dotnet ef database update` asks. The local database holds shared development data; CI already validates migrations against a throwaway SQL Server.
+- **Starting the API asks.** Running the app needs one approval per start, because Development startup migrates and seeds the database. Builds, EF commands and the frontend dev server are unaffected.
 
 **Deliberately not enabled, to avoid blocking development:**
 - **`permissions.disableBypassPermissionsMode`.** It would stop the owner using bypass mode. In bypass mode, permission prompts are skipped, so `ask` decisions and rules stop nothing there.
-- **Prompting on `dotnet run`,** even though Development startup migrates and seeds the database (CLAUDE.md). Running the app is everyday work.
 - **Blocking general `rm -rf` / `Remove-Item`.** Only `.git` (deny) and `.claude` (ask) are protected.
 - **Fail-closed hooks (`onFailure: "block"`).** A broken guard would block every shell command. The deny rules are the floor instead.
 
@@ -84,11 +97,19 @@ Read-only `SELECT` queries, `git status`/`diff`/`log`, normal `push -u`, builds,
   - other programs that change git or databases (IDE features, GUI tools, `dotnet run` migrations);
   - SQL sent through other clients.
 - `git checkout <path>` without `--` can't be told apart from `git checkout <branch>`, so it isn't flagged.
+- **API startup detection** recognizes the API by name (`FamilyHub.Api` directory, project, `.dll` or `.exe`). It misses:
+  - a bare `dotnet run` when the hook gets no `cwd`;
+  - a copy of the project under another directory name;
+  - launches from IDE debuggers (Visual Studio or VS Code F5), scripts, `npm` scripts or task runners;
+  - commands built at runtime.
+
+  A `cd` inside a subshell `( … )` is treated as if it persisted afterwards, so the check errs towards asking.
 - SQL keyword matching is conservative and can ask for harmless queries that contain words like `DELETE` in string literals.
 - The guard applies only to Claude Code sessions started in this repository. It doesn't apply to Codex, other tools, or commands you run yourself.
 - In `bypassPermissions` mode, prompts are skipped, so `ask` protections don't apply. The `deny` behaviour was verified only in the default mode (headless `claude -p`), not in bypass mode. Avoid bypass mode in this repository.
 
 ## Verifying and changing the guard
 - **Tests:** `node --test .claude/hooks/guard.test.mjs`. This runs pure fixture checks plus stdin/stdout contract tests. No command under test is executed.
+- **CI:** the same command runs as the "Claude Code guard tests" step inside the required **`i18n parity (en/mk)`** job (`.github/workflows/ci.yml`). Failing guard tests therefore fail a required check and block the merge. The job keeps its name because the `main` ruleset refers to it.
 - **Changing a rule:** update `guard.mjs` and add a test case in the same PR. Changes to `.claude/` are **S2** (shared infrastructure) and must not weaken an approval rule from `AGENTS.md`.
 - **Personal overrides** go in `.claude/settings.local.json`, which is gitignored. Deny and ask rules from `settings.json` still apply.

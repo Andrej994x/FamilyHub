@@ -12,6 +12,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { posix } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DENY = 'deny';
@@ -277,6 +278,59 @@ function ghRules(argv) {
   return null;
 }
 
+// ---------------------------------------------------------------------------------------------
+// FamilyHub API startup. In Development the API applies EF migrations and seeds sample data
+// (DbSeeder) into the configured database on startup, so starting it needs owner approval.
+// ---------------------------------------------------------------------------------------------
+
+const API_PROJECT = /(^|\/)familyhub\.api(\/familyhub\.api\.csproj|\.csproj)?$/i;
+const API_ASSEMBLY = /(^|\/)familyhub\.api\.dll$/i;
+const API_START = ask(
+  'Starting the FamilyHub API. In Development it applies EF Core migrations and seeds sample data into the configured database.',
+);
+
+const normalizePath = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '');
+
+/** Resolves a `cd` target against the current directory (which may be unknown). */
+function resolveDir(base, target) {
+  const t = normalizePath(target);
+  if (/^([A-Za-z]:\/|\/|~)/.test(t) || !base) return t;
+  return posix.normalize(`${normalizePath(base)}/${t}`);
+}
+
+/** Value of the first matching option (`--opt value` or `--opt=value`). */
+function optionValue(args, ...names) {
+  for (let i = 0; i < args.length; i++) {
+    const lower = args[i].toLowerCase();
+    for (const name of names) {
+      if (lower === name && i + 1 < args.length) return args[i + 1];
+      if (lower.startsWith(`${name}=`)) return args[i].slice(name.length + 1);
+    }
+  }
+  return null;
+}
+
+/** `dotnet run` / `dotnet watch [run]` / `dotnet [exec] …FamilyHub.Api.dll` aimed at the API. */
+function apiStartRules(argv, cwd) {
+  const args = argv.slice(1);
+  const verb = (args[0] || '').toLowerCase();
+
+  const assembly = (verb === 'exec' ? args.slice(1) : args).find((x) => !x.startsWith('-'));
+  if (assembly && API_ASSEMBLY.test(normalizePath(assembly))) return API_START;
+
+  let runs = verb === 'run';
+  if (verb === 'watch') {
+    // `dotnet watch` runs the app unless another command (build, test, …) is given.
+    const command = args.slice(1).find((x) => /^(run|build|test|publish|msbuild|format)$/i.test(x));
+    runs = !command || command.toLowerCase() === 'run';
+  }
+  if (!runs) return null;
+
+  const project = optionValue(args, '--project', '-p');
+  if (project !== null) return API_PROJECT.test(normalizePath(project)) ? API_START : null;
+  return cwd && API_PROJECT.test(normalizePath(cwd)) ? API_START : null;
+}
+
 /** Normalizes `dotnet ef`, `dotnet tool run dotnet-ef`, `dotnet dotnet-ef` and `dotnet-ef`. */
 function efArgs(argv) {
   const p = argv.map((x) => x.toLowerCase());
@@ -358,8 +412,14 @@ function genericRules(argv, redirects, program) {
 
 const SHELLS = { bash: 'bash', sh: 'bash', zsh: 'bash', dash: 'bash', pwsh: 'powershell', powershell: 'powershell', cmd: 'powershell' };
 
-/** Evaluates one shell command string (recursing into `bash -c`, `pwsh -Command`, `cmd /c`, eval). */
-export function evaluateCommand(command, dialect = 'bash', depth = 0) {
+const CD_COMMANDS = new Set(['cd', 'chdir', 'pushd', 'set-location', 'sl', 'push-location']);
+const START_PROCESS = new Set(['start-process', 'saps']);
+
+/**
+ * Evaluates one shell command string (recursing into `bash -c`, `pwsh -Command`, `cmd /c`, eval,
+ * Start-Process). `cwd` is the hook's working directory; `cd` segments update it for later ones.
+ */
+export function evaluateCommand(command, dialect = 'bash', depth = 0, cwd = null) {
   if (typeof command !== 'string' || depth > 3) return null;
   const { text, bodies } = extractHeredocs(command);
   const decisions = [];
@@ -373,18 +433,30 @@ export function evaluateCommand(command, dialect = 'bash', depth = 0) {
     const program = programName(argv[0]);
     decisions.push(genericRules(argv, segment.redirects, program));
 
-    if (SHELLS[program]) {
+    if (CD_COMMANDS.has(program)) {
+      const target = optionValue(argv.slice(1), '-path', '-literalpath') ?? argv.slice(1).find((x) => !x.startsWith('-'));
+      if (target) cwd = resolveDir(cwd, target);
+    } else if (SHELLS[program]) {
       const i = argv.findIndex((x, n) => n > 0 && /^(-[a-z]*c|-command|\/c|\/k)$/i.test(x));
-      if (i > 0 && argv[i + 1] !== undefined) decisions.push(evaluateCommand(argv.slice(i + 1).join(' '), SHELLS[program], depth + 1));
+      if (i > 0 && argv[i + 1] !== undefined) decisions.push(evaluateCommand(argv.slice(i + 1).join(' '), SHELLS[program], depth + 1, cwd));
       if (argv.some((x) => /^-(e|ec|enc|encodedcommand)$/i.test(x))) decisions.push(ask('An encoded PowerShell command cannot be inspected.'));
     } else if (['eval', 'iex', 'invoke-expression'].includes(program)) {
-      decisions.push(evaluateCommand(argv.slice(1).join(' '), dialect, depth + 1));
+      decisions.push(evaluateCommand(argv.slice(1).join(' '), dialect, depth + 1, cwd));
+    } else if (START_PROCESS.has(program)) {
+      // Re-evaluate what Start-Process would launch: FilePath + ArgumentList (+ WorkingDirectory).
+      const args = argv.slice(1);
+      const file = optionValue(args, '-filepath') ?? args.find((x) => !x.startsWith('-'));
+      const list = optionValue(args, '-argumentlist', '-args') ?? '';
+      const dir = optionValue(args, '-workingdirectory');
+      if (file) decisions.push(evaluateCommand(`${file} ${list.replace(/,/g, ' ')}`, dialect, depth + 1, dir ? resolveDir(cwd, dir) : cwd));
+    } else if (program === 'familyhub.api') {
+      decisions.push(API_START); // the API's own apphost (bin/…/FamilyHub.Api.exe)
     } else if (program === 'git') {
       decisions.push(gitRules(argv));
     } else if (program === 'gh') {
       decisions.push(ghRules(argv));
     } else if (program === 'dotnet' || program === 'dotnet-ef') {
-      decisions.push(dotnetRules(argv));
+      decisions.push(dotnetRules(argv), program === 'dotnet' ? apiStartRules(argv, cwd) : null);
     } else if (['sqlcmd', 'osql', 'invoke-sqlcmd', 'sqllocaldb', 'bcp'].includes(program)) {
       decisions.push(sqlRules(argv, bodies.get(segment.line)));
     }
@@ -421,8 +493,9 @@ export function evaluateFileEdit(toolName, toolInput = {}) {
 export function evaluate(input) {
   const tool = input?.tool_name;
   const toolInput = input?.tool_input || {};
-  if (tool === 'Bash') return evaluateCommand(toolInput.command, 'bash');
-  if (tool === 'PowerShell') return evaluateCommand(toolInput.command, 'powershell');
+  const cwd = typeof input?.cwd === 'string' ? input.cwd : null;
+  if (tool === 'Bash') return evaluateCommand(toolInput.command, 'bash', 0, cwd);
+  if (tool === 'PowerShell') return evaluateCommand(toolInput.command, 'powershell', 0, cwd);
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(tool)) return evaluateFileEdit(tool, toolInput);
   return null;
 }
