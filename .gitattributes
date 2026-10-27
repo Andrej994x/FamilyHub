@@ -1,0 +1,27 @@
+# Line endings: store LF in the repository, check out with the platform's native ending.
+* text=auto
+
+# Files that must stay LF on every platform (executed or parsed on Linux CI runners).
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Visual Studio expects CRLF in solution files.
+*.sln  text eol=crlf
+
+# Binary assets: never normalize or diff as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.pdf   binary
+
+# Generated files: collapsed in GitHub diffs and excluded from language stats.
+frontend/familyhub-web/package-lock.json                      linguist-generated=true
+backend/FamilyHub.Api/Data/Migrations/*.Designer.cs           linguist-generated=true
+backend/FamilyHub.Api/Data/Migrations/AppDbContextModelSnapshot.cs linguist-generated=true

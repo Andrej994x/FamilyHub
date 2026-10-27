@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NODE_VERSION: '22'
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  SQL_SERVER_IMAGE: mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04
+
+jobs:
+  backend:
+    name: Backend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore FamilyHub.sln
+
+      # Compiler warnings fail the build; NuGet audit warnings from restore stay visible but non-fatal.
+      - name: Build (Release, warnings as errors)
+        working-directory: backend
+        run: dotnet build FamilyHub.sln --configuration Release --no-restore -warnaserror
+
+  migrations:
+    name: EF Core migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend/FamilyHub.Api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore pinned dotnet-ef (dotnet-tools.json)
+        run: dotnet tool restore
+
+      - name: Build
+        run: dotnet build
+
+      # The EF tools also start Program.cs, which refuses to run without a JWT key. Give it a
+      # throwaway per-run key (never a real secret) so the tools run without a fatal-startup detour.
+      - name: Prepare throwaway configuration
+        run: |
+          jwt_key="$(openssl rand -base64 48)"
+          echo "::add-mask::$jwt_key"
+          echo "Jwt__Key=$jwt_key" >> "$GITHUB_ENV"
+
+      - name: Fail if the model has changes without a migration
+        run: dotnet tool run dotnet-ef migrations has-pending-model-changes --no-build
+
+      - name: Generate idempotent migration script
+        run: dotnet tool run dotnet-ef migrations script --idempotent --no-build --output "$RUNNER_TEMP/migrations.sql"
+
+      - name: Start SQL Server
+        working-directory: .
+        run: |
+          sa_password="Ci1!$(openssl rand -hex 16)"
+          echo "::add-mask::$sa_password"
+          docker run --detach --name mssql --publish 1433:1433 \
+            --env ACCEPT_EULA=Y --env "MSSQL_SA_PASSWORD=$sa_password" "$SQL_SERVER_IMAGE"
+          for attempt in $(seq 1 60); do
+            if docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$sa_password" -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server is ready."
+              echo "MSSQL_SA_PASSWORD=$sa_password" >> "$GITHUB_ENV"
+              echo "ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=FamilyHubCi;User Id=sa;Password=$sa_password;Encrypt=True;TrustServerCertificate=True" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server did not become ready in time." >&2
+          docker logs mssql
+          exit 1
+
+      - name: Apply all migrations to an empty database
+        run: dotnet tool run dotnet-ef database update --no-build
+
+      - name: Re-apply the idempotent script (must be a no-op)
+        working-directory: .
+        run: |
+          docker cp "$RUNNER_TEMP/migrations.sql" mssql:/tmp/migrations.sql
+          docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -d FamilyHubCi -i /tmp/migrations.sql
+
+      - name: Upload migration script
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: migrations-sql
+          path: ${{ runner.temp }}/migrations.sql
+          if-no-files-found: ignore
+          retention-days: 14
+
+  frontend:
+    name: Frontend build & lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend/familyhub-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/familyhub-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check and build
+        run: npm run build
+
+  i18n:
+    name: i18n parity (en/mk)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # The checker only uses Node built-ins, so no npm install is needed.
+      - name: Check translation keys and placeholders
+        working-directory: frontend/familyhub-web
+        run: npm run i18n:check
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned, checksum-verified)
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Scans the full history; rotated historical findings are listed by fingerprint in .gitleaksignore.
+      - name: Scan repository history
+        run: |
+          "$RUNNER_TEMP/gitleaks" git --redact --verbose --exit-code 1 .

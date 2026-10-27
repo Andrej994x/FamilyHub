@@ -40,7 +40,7 @@ FamilyHub/
 ```
 
 ## Prerequisites
-- [Node.js](https://nodejs.org/) 20+ and npm
+- [Node.js](https://nodejs.org/) 22 LTS (Vite 8 needs 20.19+ or 22.12+) and npm
 - [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
 - SQL Server (LocalDB, Express, or full) — required once data access is wired up
 
@@ -78,13 +78,37 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-strin
 Outside Development, supply the same settings as environment variables (`Jwt__Key`,
 `Push__PublicKey`, `Push__PrivateKey`, `ConnectionStrings__DefaultConnection`).
 
+### Database migrations
+The EF Core CLI is pinned in `dotnet-tools.json` to match the EF Core packages, so a globally
+installed `dotnet-ef` of another version is never used by accident.
+
+```bash
+dotnet tool restore                      # once per clone, from anywhere in the repo
+cd backend/FamilyHub.Api
+dotnet tool run dotnet-ef migrations add <Name>
+dotnet tool run dotnet-ef database update
+```
+
 ### Frontend
 ```bash
 cd frontend/familyhub-web
 npm install
-npm run dev      # start the Vite dev server
-npm run build    # type-check and produce a production build
+npm run dev         # start the Vite dev server
+npm run build       # type-check and produce a production build
+npm run lint        # oxlint
+npm run i18n:check  # en/mk translation key + placeholder parity
 ```
+
+## Continuous integration
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to `main` and on pushes to `main`:
+
+| Job | What it checks |
+|---|---|
+| Backend build | `dotnet build` in Release with compiler warnings as errors |
+| EF Core migrations | No model changes without a migration; all migrations apply to an empty SQL Server 2022; the idempotent script re-applies cleanly |
+| Frontend build & lint | `npm ci`, oxlint, TypeScript type-check and Vite build |
+| i18n parity (en/mk) | Both locales have identical keys and `{{placeholders}}`, with no empty strings |
+| Secret scan (gitleaks) | Full git history; rotated historical findings are listed by fingerprint in `.gitleaksignore` |
 
 ## Progressive Web App (PWA)
 
