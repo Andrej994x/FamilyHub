@@ -43,10 +43,15 @@ jobs:
         working-directory: backend
         run: dotnet build FamilyHub.sln --configuration Release --no-restore -warnaserror
 
+      # Pure unit tests: no Docker, no database server (EF Core InMemory only).
+      - name: Unit tests
+        working-directory: backend
+        run: dotnet test FamilyHub.Api.UnitTests --configuration Release --no-build --logger "console;verbosity=normal"
+
   migrations:
     name: EF Core migrations
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: backend/FamilyHub.Api
@@ -62,6 +67,18 @@ jobs:
 
       - name: Build
         run: dotnet build
+
+      # API integration tests against a disposable SQL Server started by Testcontainers (the
+      # runner's Docker engine). They run before this job exports Jwt__Key and the CI connection
+      # string below, and unset them anyway: the tests build their own isolated connection string,
+      # refuse any other database, and remove the container when they finish.
+      - name: Integration tests (Testcontainers SQL Server)
+        working-directory: backend
+        env:
+          FAMILYHUB_TEST_SQL_IMAGE: ${{ env.SQL_SERVER_IMAGE }}
+        run: |
+          unset ConnectionStrings__DefaultConnection Jwt__Key MSSQL_SA_PASSWORD
+          dotnet test FamilyHub.Api.IntegrationTests --logger "console;verbosity=normal"
 
       # The EF tools also start Program.cs, which refuses to run without a JWT key. Give it a
       # throwaway per-run key (never a real secret) so the tools run without a fatal-startup detour.
@@ -136,6 +153,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Unit and component tests (Vitest)
+        run: npm test
 
       - name: Type-check and build
         run: npm run build
