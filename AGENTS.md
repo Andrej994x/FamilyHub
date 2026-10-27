@@ -21,6 +21,7 @@ Run from the repository root unless a directory is given.
 | Frontend install / lint / build | `cd frontend/familyhub-web && npm ci && npm run lint && npm run build` |
 | i18n parity | `cd frontend/familyhub-web && npm run i18n:check` |
 | Secret scan | `gitleaks git --redact .` (gitleaks 8.30.1 in CI) |
+| Claude Code guard tests | `node --test .claude/hooks/guard.test.mjs` |
 
 Always use the pinned `dotnet tool run dotnet-ef`, never a global `dotnet ef` of another version.
 

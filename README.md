@@ -38,6 +38,7 @@ FamilyHub/
 │   └── FamilyHub.Api/          # ASP.NET Core 8 Web API (EF Core migrations in Data/Migrations)
 ├── docs/
 │   └── ARCHITECTURE.md         # system architecture
+├── .claude/                    # Claude Code guardrails (permissions + PreToolUse guard)
 ├── .github/                    # CI workflow and PR template
 ├── AGENTS.md                   # engineering conventions (shared by people and AI agents)
 ├── CLAUDE.md                   # Claude Code-specific instructions

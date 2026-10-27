@@ -29,5 +29,8 @@ Thumbs.db
 .env.*
 appsettings.*.local.json
 
+# ---- Claude Code personal settings (shared config is .claude/settings.json) ----
+.claude/settings.local.json
+
 # Backend-hosted PWA build output (frontend dist copied for single-origin hosting)
 backend/FamilyHub.Api/wwwroot/

@@ -14,5 +14,12 @@ The shared conventions, risk levels (S0–S3), required gates and approval rules
 - **Secret-scan findings.** Never add a fingerprint to `.gitleaksignore` to silence a finding unless the owner confirms that secret has been rotated.
 - **Shell.** The development machine is Windows: both PowerShell and Git Bash are available, and user-secrets live in `%APPDATA%\Microsoft\UserSecrets\`.
 
+## Guardrails (`.claude/`)
+`.claude/settings.json` registers a deterministic PreToolUse guard (`.claude/hooks/guard.mjs`) and permission rules:
+- **Denied:** destructive Git, database and secret operations, such as force push, `reset --hard`, `clean -f`, `ef database drop` and secret stores.
+- **Prompted:** actions that need owner approval, such as merging a PR, deleting branches, `ef database update`, SQL writes and user-secrets changes.
+
+A block includes a `FamilyHub guard:` reason. Follow its suggested alternative or ask the owner. Never work around a block with a different spelling of the same command. These are guardrails, not a sandbox. See [.claude/README.md](.claude/README.md) for every rule, its trade-offs and its limitations.
+
 ## Not configured yet
-This repository has no project-specific Claude Code skills, subagents, hooks or MCP servers, and Codex is not set up. Don't assume any of these exist. Adding them is separate, planned work.
+This repository has no project-specific Claude Code skills, subagents or MCP servers, and Codex is not set up. Don't assume any of these exist.
