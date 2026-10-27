@@ -176,4 +176,5 @@ jobs:
 
       # Scans the full history; rotated historical findings are listed by fingerprint in .gitleaksignore.
       - name: Scan repository history
-        run: "$RUNNER_TEMP/gitleaks" git --redact --verbose --exit-code 1 .
+        run: |
+          "$RUNNER_TEMP/gitleaks" git --redact --verbose --exit-code 1 .
