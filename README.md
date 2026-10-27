@@ -150,4 +150,5 @@ secure context, so the PWA installs and the service worker runs without a certif
 The core features are implemented: families and invitations, tasks, calendar, shopping, pickups,
 the Family Vault, notifications with Web Push, and reminders. CI covers build, lint, migrations,
 i18n parity and secret scanning. There are no automated tests yet. See
-[docs/ARCHITECTURE.md → Known gaps](docs/ARCHITECTURE.md#12-known-gaps-observed-in-the-code).
+[docs/ARCHITECTURE.md → Known security risks](docs/ARCHITECTURE.md#12-known-security-risks-separate-s3-review-required)
+and [Known gaps](docs/ARCHITECTURE.md#13-known-gaps-observed-in-the-code).

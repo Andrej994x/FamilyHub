@@ -16,7 +16,7 @@ Run from the repository root unless a directory is given.
 | Restore pinned tools (`dotnet-ef` 8.0.11) | `dotnet tool restore` |
 | Backend build (as CI) | `cd backend && dotnet build FamilyHub.sln -c Release -warnaserror` |
 | Run API (Development) | `cd backend && dotnet run --project FamilyHub.Api --launch-profile http` |
-| Model changed without a migration? | `cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations has-pending-model-changes` |
+| Model changed without a migration? | `cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations has-pending-model-changes` (add `--no-build` while a local API process locks `bin/Debug`) |
 | Add a migration | `cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations add <Name>` |
 | Frontend install / lint / build | `cd frontend/familyhub-web && npm ci && npm run lint && npm run build` |
 | i18n parity | `cd frontend/familyhub-web && npm run i18n:check` |
@@ -65,10 +65,24 @@ Classify every task before starting. The highest matching level wins; if unsure,
 
 | Gate | S0 | S1 | S2 | S3 |
 |---|---|---|---|---|
-| Written plan before coding | — | Short, in the PR | **Required**, shared before implementation | **Required and approved by the owner** before implementation |
+| Written plan before coding | — | Short, in the PR | **Concise plan** presented first, then implement within that scope | **Plan explicitly approved by the owner** before any implementation |
 | Security review | — | — | Required if it touches endpoints, input handling or dependencies | **Required**. Results recorded in the PR |
 | Testing | CI green | CI green + manual check of the changed behavior | CI green + manual verification steps and evidence in the PR | Same as S2, plus negative cases (unauthorized user, wrong family, invalid input) |
 | Independent Codex review | — | — | Recommended | **Required** before merge |
+
+**Planning and approval:**
+- **S2:** present a concise plan covering scope, affected files, risks and the verification approach. Then implement it autonomously (e.g. Claude Code Auto Mode) within that scope, without asking before each safe step. Stop and re-plan if the scope grows or the work turns out to be S3.
+- **S3:** do not start implementing until the owner explicitly approves the plan.
+- **At every level:** the actions listed under *Actions that need explicit owner approval* below still need their own approval.
+
+**Security review:** Claude Code has a built-in `/security-review` command that reviews the current branch's pending changes; it must run from inside the repository. Where it is not available (for example Codex or another tool), do a manual review of the diff and record each item in the PR:
+1. **Authentication and authorization:** every new or changed endpoint is `[Authorize]`d. The service follows the family authorization order (family exists → caller is a member → role), and entities are looked up by `Id` + `FamilyId` (or through the parent's family).
+2. **Input:** request DTOs have a FluentValidation validator that the controller calls, and there is no raw SQL built from strings.
+3. **Data exposure:** responses are DTOs, not entities, and contain no other family's data.
+4. **Secrets and logging:** nothing secret is committed or logged. `gitleaks git --redact .` is clean.
+5. **Files and URLs:** uploads keep the `FamilyVaultStorage` limits, and no user-controlled paths or redirects are introduced.
+6. **Dependencies:** new packages are justified. Run `npm audit` in `frontend/familyhub-web` and `dotnet list package --vulnerable` in `backend/FamilyHub.Api`. Run the latter from the project directory: SDK 8.0.201 fails when given a relative `.sln` path.
+7. **Config and transport:** CORS, HTTPS, forwarded headers and the service worker's caching of `/api` are unchanged, or the change is explicitly justified.
 
 **Testing note:** there is no test project yet, so "testing" means CI plus documented manual verification. When test infrastructure is added, S2/S3 changes must add automated tests.
 

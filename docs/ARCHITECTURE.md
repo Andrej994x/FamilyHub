@@ -38,7 +38,7 @@ flowchart LR
 ## 2. Backend (`backend/FamilyHub.Api`)
 
 ### Request pipeline (`Program.cs`, in order)
-1. **Forwarded headers:** trusts `X-Forwarded-For` and `X-Forwarded-Proto` from any proxy (the known networks/proxies lists are cleared).
+1. **Forwarded headers:** trusts `X-Forwarded-For` and `X-Forwarded-Proto` from **any** source, because the known networks/proxies lists are cleared. This is a known security risk; see [§12](#12-known-security-risks-separate-s3-review-required).
 2. **Serilog request logging.**
 3. **`ExceptionHandlingMiddleware`:** turns unhandled exceptions into a 500 `ErrorResponse`. Exception details are included only in Development.
 4. **Development:** Swagger UI, plus `DbSeeder.SeedAsync`, which **applies migrations and seeds a sample family** (no-op if it already exists). **Otherwise:** HSTS.
@@ -152,6 +152,7 @@ Roles (`Models/Enums/FamilyRole.cs`): `Owner`, `Parent`, `Member`, `Child`. A us
 - The token is 32 random bytes (hex), stored in plaintext and returned to the inviter in the create response. It expires after `Invitations:ExpiryDays` (7).
 - Anyone signed in who holds the token and has no family can accept. Their email is **not** compared with the invited email.
 - The frontend keeps a pending token in `sessionStorage` (`utils/pendingInvitation.ts`) across login/registration.
+- This token behavior is a known security risk; see [§12](#12-known-security-risks-separate-s3-review-required).
 
 The frontend hides UI using `src/utils/roles.ts`. This is cosmetic only.
 
@@ -251,12 +252,40 @@ Downloads go through the authorized `VaultAttachmentsController` (`PhysicalFile`
 ## 11. Quality gates
 The CI jobs in `.github/workflows/ci.yml` and the `main` ruleset are described in [AGENTS.md → CI quality gates](../AGENTS.md#ci-quality-gates). There are **no automated tests**: no backend test project, and no frontend test runner or `test` script.
 
-## 12. Known gaps observed in the code
+## 12. Known security risks (separate S3 review required)
+These describe the current behavior. They are **not** fixed by this documentation. Any change to them is an S3 task: it needs its own plan, owner approval, security review and independent Codex review (see [AGENTS.md](../AGENTS.md#required-process-by-level)).
+
+### 12.1 Forwarded headers are trusted from any source
+- **Code:** `Program.cs` enables `X-Forwarded-For` and `X-Forwarded-Proto` and clears `KnownNetworks` and `KnownProxies`. `UseForwardedHeaders()` is the first middleware.
+- **Effect:** if the API can be reached other than through the trusted reverse proxy, any client can set these headers.
+  - A spoofed `X-Forwarded-Proto: https` marks a plain-HTTP request as HTTPS. That bypasses `UseHttpsRedirection` and affects HSTS.
+  - A spoofed `X-Forwarded-For` replaces the client IP that ASP.NET Core sees.
+  - No application code reads the client IP or scheme today. Any future IP-based control, such as rate limiting or audit logging, would inherit this weakness.
+- **Review questions:**
+  - Should trust be restricted to the actual proxy address or network?
+  - Should the middleware only be enabled behind a proxy?
+  - Should `ForwardLimit` be set explicitly?
+
+### 12.2 Invitation tokens act as bearer secrets
+- **Code:** `Services/InvitationService.cs`, `Models/FamilyInvitation.cs`.
+- **Effect:**
+  - The token is stored **in plaintext** in `FamilyInvitations.Token`, so anyone who can read the database holds usable tokens.
+  - It is returned to the inviter in the create and resend responses (`CreatedInvitationResponse`).
+  - In Development, `LoggingEmailSender` writes the accept link to the logs.
+  - Accepting does **not** check that the signed-in user's email matches the invited email. Anyone with the link who has no family joins with the **invited role**, which can be `Parent`, with manage rights.
+  - **Resend keeps the same token** and also revives *expired* invitations with a new expiry window, so an old link becomes valid again.
+- **Review questions:**
+  - Should only a hash of the token be stored?
+  - Should acceptance be bound to the invited email?
+  - Should the token rotate on resend?
+  - Should the token stop being returned in API responses?
+  - Should accept attempts be rate-limited?
+
+## 13. Known gaps observed in the code
 These are recorded facts, not planned work:
 - No automated tests. TypeScript `strict` is off.
 - No refresh tokens or token revocation. The JWT is kept in `localStorage`.
 - No account lockout or rate limiting on login and register.
-- Invitation tokens are stored in plaintext and are not bound to the invited email.
 - Push: 401/403 responses don't deactivate subscriptions, and stale-key subscriptions are reused on the client.
 - Push delivery runs inline in the request. Reminders run in-process in every instance; `ReminderHistory` stops duplicate sends but not duplicate processing.
 - Vault files live on the API server's local disk and are validated by extension and content type only.
