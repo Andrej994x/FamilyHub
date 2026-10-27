@@ -55,6 +55,29 @@ dotnet run --project FamilyHub.Api
 ```
 Swagger UI is served at `https://localhost:<port>/swagger` in Development.
 
+### Local development secrets
+Secrets are never committed: `appsettings*.json` only hold empty placeholders. In Development the
+real values come from [.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets),
+which are stored outside the repository (`%APPDATA%\Microsoft\UserSecrets\` on Windows). The API refuses
+to start without a JWT signing key of at least 32 bytes. The EF Core tools read the same secrets.
+
+```bash
+cd backend/FamilyHub.Api
+
+# Required: JWT signing key (e.g. 64 random bytes, base64-encoded)
+dotnet user-secrets set "Jwt:Key" "<random-key>"
+
+# Optional: Web Push (VAPID) key pair — without it, pushes are logged instead of sent
+dotnet user-secrets set "Push:PublicKey" "<vapid-public-key>"
+dotnet user-secrets set "Push:PrivateKey" "<vapid-private-key>"
+
+# Optional: only when not using the default LocalDB instance
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string>"
+```
+
+Outside Development, supply the same settings as environment variables (`Jwt__Key`,
+`Push__PublicKey`, `Push__PrivateKey`, `ConnectionStrings__DefaultConnection`).
+
 ### Frontend
 ```bash
 cd frontend/familyhub-web

@@ -6,7 +6,8 @@ namespace FamilyHub.Api.Data;
 
 /// <summary>
 /// Design-time factory used by the EF Core tools (migrations) so they don't need to
-/// build and start the full application host.
+/// build and start the full application host. Configuration sources and precedence mirror the
+/// Development host: appsettings → user-secrets → environment variables.
 /// </summary>
 public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
@@ -16,6 +17,8 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddUserSecrets(typeof(AppDbContextFactory).Assembly, optional: true)
+            .AddEnvironmentVariables()
             .Build();
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
