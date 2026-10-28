@@ -128,6 +128,86 @@ for (const c of TEST_COMMANDS_BASH) {
 for (const c of TEST_WRITER_DENIED_BASH) test(`test-writer denies: ${c}`, () => assert.equal(action(bash('test-writer', c)), 'deny'));
 
 // ---------------------------------------------------------------------------------------------
+// Regression (Codex review, PR #6, P1): "read-only" programs with write-capable or exec options.
+// Options are now allowlisted per command; unknown options are denied.
+// ---------------------------------------------------------------------------------------------
+const WRITE_OPTION_BYPASSES = [
+  // sort: -o/--output and -T write files, --compress-program runs a program
+  'sort -o backend/FamilyHub.Api/Program.cs input.txt', 'sort --output=backend/FamilyHub.Api/Program.cs input.txt',
+  'sort --output backend/FamilyHub.Api/Program.cs input.txt', 'sort -uo backend/FamilyHub.Api/Program.cs input.txt',
+  'sort -rko backend/FamilyHub.Api/Program.cs input.txt', 'sort -obackend/FamilyHub.Api/Program.cs input.txt',
+  'cd backend/FamilyHub.Api && sort -o Program.cs Program.cs', 'git log --oneline | sort -o out.txt',
+  'sort -T /tmp input.txt', 'sort -T/tmp input.txt', 'sort --temporary-directory=/tmp input.txt', 'sort --compress-program=calc input.txt',
+  // uniq: a second file argument is an output file
+  'uniq input.txt backend/FamilyHub.Api/Program.cs', 'uniq -c input.txt backend/FamilyHub.Api/Program.cs', 'uniq input.txt -',
+  // rg options that run programs
+  'rg --pre=sh pattern', 'rg --pre sh pattern', 'rg --hostname-bin=calc pattern',
+  // gitleaks: reports, diagnostics, --log-opts (passes --output to git), configs and baselines
+  'gitleaks git --redact --log-opts=--output=pwn.txt .', 'gitleaks git --redact --log-opts "--output=pwn.txt" .',
+  'gitleaks git --redact --diagnostics=cpu --diagnostics-dir=. .', 'gitleaks dir --redact --report-path=r.json .',
+  'gitleaks git --redact -r r.json .', 'gitleaks git --redact --config evil.toml .', 'gitleaks git --redact --baseline-path b.json .',
+  // npm read commands with path or config options
+  'npm audit --logs-dir=backend/FamilyHub.Api', 'npm ls --prefix=backend/FamilyHub.Api', 'npm audit --cache=backend/x',
+  'npm view vitest --userconfig=x.npmrc', 'npm ls --globalconfig=x', 'npm outdated --prefix x', 'npm audit signatures',
+  // dotnet read commands with write-capable options
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations list --msbuildprojectextensionspath obj2',
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations script --output=out.sql',
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations list --connection "Server=x"',
+  'dotnet list package --vulnerable --source x', 'dotnet list --interactive FamilyHub.Api package --vulnerable',
+  'dotnet --version --diagnostics',
+];
+const READ_OPTIONS_STILL_ALLOWED = [
+  'sort -rn input.txt', 'sort -k2 -t, input.txt', 'sort -u --key=2 input.txt', 'sort -k 2 -t , input.txt',
+  'git log --oneline | sort | uniq -c', 'uniq -c input.txt', 'uniq -d -f 1 input.txt', 'rg -n --hidden AuthorizeAsync backend',
+  'gitleaks git --redact --no-banner -v .', 'gitleaks dir --redact --exit-code 0 backend', 'gitleaks version',
+  'npm audit --json --omit=dev', 'npm audit --audit-level=high', 'npm ls --depth=0', 'npm view vitest version', 'npm --version',
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations list --no-build --project FamilyHub.Api',
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations script --idempotent',
+  'cd backend/FamilyHub.Api && dotnet tool run dotnet-ef migrations script InitialIdentity AddFamilyDomain',
+  'dotnet list FamilyHub.Api package --vulnerable --include-transitive', 'dotnet --info',
+];
+// test-writer build/test options that write outside the test folders or run arbitrary programs.
+const TEST_WRITER_OPTION_BYPASSES = [
+  'dotnet build backend/FamilyHub.Api.UnitTests -o backend/FamilyHub.Api', 'dotnet build FamilyHub.sln --output=backend/FamilyHub.Api',
+  'dotnet test FamilyHub.Api.UnitTests --results-directory backend/FamilyHub.Api',
+  'dotnet test FamilyHub.Api.UnitTests --diag backend/FamilyHub.Api/diag.txt',
+  'dotnet test FamilyHub.Api.UnitTests --logger "trx;LogFileName=../FamilyHub.Api/x.trx"',
+  'dotnet test FamilyHub.Api.UnitTests -l "html;LogFileName=x.html"', 'dotnet build -bl:backend/FamilyHub.Api/x.binlog',
+  'dotnet build /bl', 'dotnet restore --use-lock-file', 'dotnet build -p:PostBuildEvent=calc', 'dotnet build /p:X=1',
+  'dotnet test -t:Exec', 'dotnet test --property:X=1', 'dotnet test --blame', 'dotnet build FamilyHub.sln FamilyHub.Api',
+  'npx vitest run -u', 'npx vitest run --update', 'npx vitest run --coverage', 'npx vitest run --outputFile=src/App.tsx --reporter=json',
+  'npx vitest run --config evil.config.ts', 'npx vitest run --root ..', 'npx vitest run --reporter=json', 'npx vitest run --watch',
+];
+const TEST_WRITER_OPTIONS_STILL_ALLOWED = [
+  'cd backend && dotnet test FamilyHub.Api.UnitTests --configuration Release --no-build --logger "console;verbosity=normal"',
+  'cd backend && dotnet build FamilyHub.sln -c Release -warnaserror', 'dotnet test FamilyHub.Api.IntegrationTests --filter "FullyQualifiedName~TestDatabaseGuardTests"',
+  'dotnet test --no-restore -v minimal', 'dotnet restore', 'npx vitest run src/api/client.test.ts -t "attaches the bearer token"',
+  'npx vitest run --reporter=verbose', 'npx vitest run src/pages --silent',
+];
+
+for (const agent of ['security-reviewer', 'test-writer']) {
+  for (const c of WRITE_OPTION_BYPASSES) test(`${agent} denies write-capable option: ${c}`, () => assert.equal(action(bash(agent, c)), 'deny'));
+  for (const c of READ_OPTIONS_STILL_ALLOWED) test(`${agent} still allows: ${c}`, () => assert.equal(action(bash(agent, c)), 'none', bash(agent, c)?.reason));
+  test(`${agent}: the reported sort -o bypass is denied in PowerShell too`, () => {
+    assert.equal(action(ps(agent, 'sort -o backend\\FamilyHub.Api\\Program.cs input.txt')), 'deny');
+  });
+}
+for (const c of TEST_WRITER_OPTION_BYPASSES) {
+  test(`test-writer denies write-capable build/test option: ${c}`, () => assert.equal(action(bash('test-writer', c)), 'deny'));
+  test(`security-reviewer denies (not a read-only command): ${c}`, () => assert.equal(action(bash('security-reviewer', c)), 'deny'));
+}
+for (const c of TEST_WRITER_OPTIONS_STILL_ALLOWED) {
+  test(`test-writer still allows: ${c}`, () => assert.equal(action(bash('test-writer', c)), 'none', bash('test-writer', c)?.reason));
+}
+test('settings guard path: the reported bypass is denied through agent_type for both agents', () => {
+  for (const agent of ['security-reviewer', 'test-writer']) {
+    const decision = evaluate({ tool_name: 'Bash', agent_type: agent, tool_input: { command: 'sort -o backend/FamilyHub.Api/Program.cs input.txt' } });
+    assert.equal(action(decision), 'deny');
+    assert.match(decision.reason, /option `-o` is not on the allowlist/);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
 // File edits
 // ---------------------------------------------------------------------------------------------
 test('security-reviewer can never edit, even a test file', () => {

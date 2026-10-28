@@ -145,7 +145,15 @@ Two layers run the same code:
 | | `security-reviewer` | `test-writer` |
 |---|---|---|
 | Write/Edit/MultiEdit/NotebookEdit | **always denied** | Allowed in `backend/FamilyHub.Api.UnitTests/**`, `backend/FamilyHub.Api.IntegrationTests/**`, `frontend/familyhub-web/src/**/*.test.ts(x)` and `src/test/**`. **Ask:** test `*.csproj`, `package.json`/lock, `vitest.config.ts`, `src/test/setup.ts`. **Denied:** the isolation guards (`TestDatabaseGuard`, `DockerEndpointGuard`, `FamilyHubApiFixture`, `FamilyHubApiFactory`, `Safety/`), `bin/`/`obj/`, and everything else, including all production code |
-| Shell allowlist | Read-only git (`status`, `diff`, `log`, `show`, `blame`, `ls-files`, `merge-base`, `rev-parse`, `grep`, branch listing), `rg`/`grep`/`cat`-style filters, `find` without actions, `gitleaks … --redact` without reports, `npm audit` (no `fix`), `dotnet list package --vulnerable`, read-only EF migration listing, read-only `gh` (`pr view`/`diff`/`checks`, `run view`/`list`, GET `api`), `node --test .claude/hooks/*.test.mjs`, `cd` | The same **plus** `dotnet build`/`test`/`restore` (no `-p:`/`-t:` MSBuild overrides), `npm test`, `npm run test`/`lint`/`build`/`i18n:check`, `npx vitest run` |
+| Shell allowlist | Read-only git (`status`, `diff`, `log`, `show`, `blame`, `ls-files`, `merge-base`, `rev-parse`, `grep`, branch listing), `rg`/`grep`/`cat`-style filters, `find` without actions, `gitleaks … --redact` without reports, `npm audit` (no `fix`), `dotnet list package --vulnerable`, read-only EF migration listing, read-only `gh` (`pr view`/`diff`/`checks`, `run view`/`list`, GET `api`), `node --test .claude/hooks/*.test.mjs`, `cd` | The same **plus** `dotnet build`/`test`/`restore`, `npm test`, `npm run test`/`lint`/`build`/`i18n:check`, `npx vitest run` |
+
+**Options are allowlisted per command, not just program names.** Several "read-only" programs have options that write files or run programs. The PR #6 Codex review found `sort -o`; the follow-up audit found `uniq in out`, `sort -T`/`--compress-program`, `gitleaks --log-opts`/`--diagnostics-dir`, `npm --prefix`/`--logs-dir`/`--cache`, and EF `--msbuildprojectextensionspath`. For test-writer it also found:
+- `dotnet build -o`, `--results-directory`, `--diag`, file loggers, `-bl`/`/bl`, `--use-lock-file` and `-p:`/`-t:`;
+- `vitest -u`/`--coverage`/`--outputFile`/`--config`.
+
+So every program with options validates them against its own allowlist, and an **unknown option is denied**. `uniq` takes at most one file argument, and a `dotnet` argument starting with `/` is treated as an MSBuild switch, not a path.
+
+Only programs audited to have *no* write or exec options accept any options: coreutils `cat`, `head`, `tail`, `wc`, `ls`, `cut`, `basename`, `dirname`, `pwd`, `true`, plus `diff`, `grep`, `echo`/`printf`, and the read-only PowerShell cmdlets. For the remaining denylist-style cases, the denied options are the complete documented set: git's `--output`/`-O`/`--ext-diff`/`--textconv`, find's `-exec`/`-ok`/`-delete`/`-fprint*`/`-fls`, and rg's `--pre`/`--hostname-bin`.
 
 **Always denied for both:**
 - **chaining:** any part of `&&`, `||`, `;`, `|`, `&` or a newline that isn't allowlisted;

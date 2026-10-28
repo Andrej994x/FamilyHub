@@ -45,20 +45,92 @@ function quotesBalanced(text, dialect) {
 }
 
 const NULL_SINKS = new Set(['/dev/null', 'nul', '$null']);
-const READ_FILTERS = new Set(['cat', 'head', 'tail', 'wc', 'ls', 'sort', 'uniq', 'cut', 'diff', 'pwd', 'echo', 'printf', 'basename', 'dirname', 'true']);
+// Programs with NO option that writes files or runs other programs (audited: GNU coreutils
+// cat/head/tail/wc/ls/cut/basename/dirname/pwd/true, diffutils diff, grep, bash echo/printf, and
+// read-only PowerShell cmdlets). Any options are accepted for these. Every other program below
+// validates its options against an allowlist, so an unknown option is denied (fail closed).
+const NO_WRITE_OPTIONS = new Set(['cat', 'head', 'tail', 'wc', 'ls', 'cut', 'diff', 'grep', 'egrep', 'pwd', 'echo', 'printf', 'basename', 'dirname', 'true']);
 const CHANGE_DIRECTORY = new Set(['cd', 'pushd', 'popd', 'set-location', 'sl', 'push-location', 'pop-location']);
 const PS_READ = new Set(['get-content', 'gc', 'type', 'get-childitem', 'gci', 'dir', 'select-string', 'sls', 'test-path', 'get-item', 'gi', 'measure-object', 'measure', 'select-object', 'select', 'sort-object', 'get-location', 'gl', 'resolve-path', 'write-output', 'write']);
 const GIT_READ = new Set(['status', 'diff', 'log', 'show', 'blame', 'ls-files', 'merge-base', 'rev-parse', 'grep', 'shortlog', 'describe']);
+// For these git subcommands the complete set of write/exec options is: --output (diff/log/show),
+// -O/--open-files-in-pager (grep), --ext-diff and --textconv (run configured programs).
 const GIT_UNSAFE_OPTION = /^(--output|--ext-diff|--textconv|-O|--open-files-in-pager|--exec)/;
 const BRANCH_FLAGS = new Set(['-a', '-r', '-v', '-vv', '--list', '--show-current', '--all', '--remotes', '--verbose']);
 const SECRET_REFERENCE = /usersecrets|(^|[\\/])\.env(\.|$)/i;
 
+/**
+ * Validates options against an allowlist. spec: switches (RegExp of value-less options),
+ * values (Set of options taking a value, as `--opt v` or `--opt=v`), attached (RegExp of
+ * options with an attached value such as `-k2`), valueCheck(name, value), maxPositional,
+ * positional (RegExp each positional argument must match).
+ */
+function optionsProblem(command, args, spec) {
+  let positional = 0;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith('-') || arg === '-') {
+      positional++;
+      if (spec.positional && !spec.positional.test(arg)) return `\`${command}\` argument \`${arg}\` is not allowed.`;
+      continue;
+    }
+    if (spec.switches?.test(arg)) continue;
+    const eq = arg.indexOf('=');
+    const name = eq > 0 ? arg.slice(0, eq) : arg;
+    if (spec.values?.has(name)) {
+      const value = eq > 0 ? arg.slice(eq + 1) : args[++i];
+      if (value === undefined) return `\`${command} ${name}\` needs a value.`;
+      if (spec.valueCheck && !spec.valueCheck(name, value)) return `\`${command} ${name} ${value}\` is not allowed.`;
+      continue;
+    }
+    if (spec.attached?.test(arg)) continue;
+    return `\`${command}\` option \`${arg}\` is not on the allowlist (it may write files or run programs).`;
+  }
+  if (spec.maxPositional !== undefined && positional > spec.maxPositional) {
+    return `\`${command}\` accepts at most ${spec.maxPositional} file argument(s) here (an extra one would be an output file).`;
+  }
+  return null;
+}
+
+// sort: -o/--output and -T write files, --compress-program runs a program; only these are allowed.
+const SORT_OPTIONS = {
+  switches: /^(-[rnufbdghiMRVcCmsz]+|--(reverse|numeric-sort|unique|ignore-case|ignore-leading-blanks|dictionary-order|general-numeric-sort|human-numeric-sort|month-sort|random-sort|version-sort|check|merge|stable|zero-terminated))$/,
+  values: new Set(['-k', '--key', '-t', '--field-separator']),
+  attached: /^-[kt].+$/,
+};
+// uniq: a second file argument is an OUTPUT file, so at most one input is accepted.
+const UNIQ_OPTIONS = {
+  switches: /^(-[cduiDz]+|--(count|repeated|unique|ignore-case|all-repeated(=\w+)?|group(=\w+)?|zero-terminated))$/,
+  values: new Set(['-f', '--skip-fields', '-s', '--skip-chars', '-w', '--check-chars']),
+  attached: /^-[fsw]\d+$/,
+  maxPositional: 1,
+};
+// gitleaks: no reports, diagnostics, --log-opts (passes options such as --output to git) or configs.
+const GITLEAKS_OPTIONS = {
+  switches: /^(--redact(=\d+)?|-v|--verbose|--no-banner|--no-color|--follow-symlinks)$/,
+  values: new Set(['--exit-code', '--log-level', '--max-target-megabytes', '--timeout']),
+  maxPositional: 1,
+};
+// npm read commands: only output-format/filter flags (no --prefix, --logs-dir, --cache, configs).
+const NPM_READ_OPTIONS = {
+  switches: /^--(json|production|all|long|parseable|omit=[\w-]+|include=[\w-]+|audit-level=\w+|depth=\d+)$/,
+};
+// dotnet-ef read commands: no --msbuildprojectextensionspath, -o/--output, --connection, etc.
+const EF_READ_OPTIONS = {
+  switches: /^(--no-build|--json|-v|--verbose|--no-color|--prefix-output|--idempotent|--no-transactions)$/,
+  values: new Set(['-c', '--context', '-p', '--project', '-s', '--startup-project', '--configuration', '--framework']),
+};
+
 /** Read-only commands both restricted agents may run. Returns a deny reason or null. */
 function readOnlyProblem(program, args) {
-  if (READ_FILTERS.has(program) || PS_READ.has(program) || CHANGE_DIRECTORY.has(program)) return null;
-  if (program === 'grep' || program === 'egrep') return null;
-  if (program === 'rg') return args.some((a) => /^--pre/.test(a)) ? '`rg --pre` runs a preprocessor program.' : null;
+  if (NO_WRITE_OPTIONS.has(program) || PS_READ.has(program) || CHANGE_DIRECTORY.has(program)) return null;
+  if (program === 'sort') return optionsProblem('sort', args, SORT_OPTIONS);
+  if (program === 'uniq') return optionsProblem('uniq', args, UNIQ_OPTIONS);
+  if (program === 'rg') {
+    return args.some((a) => /^--(pre|hostname-bin)/.test(a)) ? '`rg --pre`/`--hostname-bin` run other programs.' : null;
+  }
   if (program === 'find') {
+    // GNU find's complete set of actions that run programs or write files.
     return args.some((a) => /^-(exec|execdir|ok|okdir|delete|fprint|fprint0|fprintf|fls)$/.test(a))
       ? '`find` with an action that runs or writes is not allowed.'
       : null;
@@ -79,22 +151,28 @@ function readOnlyProblem(program, args) {
     return `\`git ${sub ?? ''}\` is not a read-only git command.`;
   }
   if (program === 'gitleaks') {
-    if (!['git', 'dir', 'detect', 'protect', 'version'].includes(args[0])) return 'Only gitleaks scans are allowed.';
-    if (args.some((a) => /^(-r|--report)/.test(a))) return 'gitleaks report files are not allowed (read-only agent).';
-    return args[0] === 'version' || args.includes('--redact') ? null : 'gitleaks must run with --redact.';
+    if (args.length === 1 && args[0] === 'version') return null;
+    if (!['git', 'dir', 'detect', 'protect'].includes(args[0])) return 'Only gitleaks scans are allowed.';
+    if (!args.some((a) => /^--redact(=\d+)?$/.test(a))) return 'gitleaks must run with --redact.';
+    return optionsProblem(`gitleaks ${args[0]}`, args.slice(1), GITLEAKS_OPTIONS);
   }
   if (program === 'npm') {
-    if (args[0] === 'audit') return args.some((a) => /fix/i.test(a)) ? '`npm audit fix` modifies dependencies.' : null;
-    if (['ls', 'outdated', 'view', '--version', '-v'].includes(args[0])) return null;
+    if (args.length === 1 && ['--version', '-v'].includes(args[0])) return null;
+    if (['audit', 'outdated'].includes(args[0])) return optionsProblem(`npm ${args[0]}`, args.slice(1), { ...NPM_READ_OPTIONS, maxPositional: 0 });
+    if (['ls', 'view'].includes(args[0])) {
+      return optionsProblem(`npm ${args[0]}`, args.slice(1), { ...NPM_READ_OPTIONS, positional: /^@?[\w.-]+(\/[\w.-]+)?(@[\w.^~<>=*-]+)?$/ });
+    }
     return `\`npm ${args[0] ?? ''}\` is not allowed for this agent.`;
   }
   if (program === 'dotnet') {
-    if (['--version', '--info', '--list-sdks', '--list-runtimes'].includes(args[0])) return null;
+    if (args.length === 1 && ['--version', '--info', '--list-sdks', '--list-runtimes'].includes(args[0])) return null;
     const p = args.indexOf('package');
-    if (args[0] === 'list' && p > 0 && args.slice(p + 1).every((a) => /^--(vulnerable|outdated|deprecated|include-transitive)$/.test(a))) return null;
+    if (args[0] === 'list' && p > 0 && args.slice(1, p).every((a) => !a.startsWith('-') && !a.startsWith('/'))
+      && args.slice(p + 1).every((a) => /^--(vulnerable|outdated|deprecated|include-transitive)$/.test(a))) return null;
     if (args[0] === 'tool' && args[1] === 'run' && args[2] === 'dotnet-ef' && args[3] === 'migrations') {
-      if (['list', 'has-pending-model-changes'].includes(args[4])) return null;
-      if (args[4] === 'script' && !args.some((a) => /^(-o|--output)/.test(a))) return null;
+      const rest = args.slice(5);
+      if (['list', 'has-pending-model-changes'].includes(args[4])) return optionsProblem(`dotnet-ef migrations ${args[4]}`, rest, { ...EF_READ_OPTIONS, maxPositional: 0 });
+      if (args[4] === 'script') return optionsProblem('dotnet-ef migrations script', rest, { ...EF_READ_OPTIONS, maxPositional: 2, positional: /^[\w.]+$/ });
     }
     return 'This dotnet command is not allowed for this agent.';
   }
@@ -113,20 +191,33 @@ function readOnlyProblem(program, args) {
   return `\`${program}\` is not on this agent's allowlist.`;
 }
 
+// dotnet build/test/restore: no -o/--output, --results-directory, --diag, -bl/binlogs, file
+// loggers, lock files or MSBuild -p:/-t: (which can run arbitrary commands, e.g. PostBuildEvent).
+const DOTNET_BUILD_OPTIONS = {
+  switches: /^(--no-build|--no-restore|--nologo|-nologo|-warnaserror|\/warnaserror|--no-dependencies|--no-incremental)$/,
+  values: new Set(['-c', '--configuration', '-f', '--framework', '-v', '--verbosity', '--filter', '-r', '--runtime', '-a', '--arch', '--os', '-l', '--logger']),
+  valueCheck: (name, value) => !['-l', '--logger'].includes(name) || /^console(;verbosity=\w+)?$/i.test(value),
+  maxPositional: 1,
+  // A project/solution path. Must not start with '/', which MSBuild also reads as a switch (/bl, /p:…).
+  positional: /^(?!\/)[\w.\\/-]+$/,
+};
+// vitest run: test-name filters and console reporters only (no -u, --coverage, --outputFile, --config).
+const VITEST_RUN_OPTIONS = {
+  switches: /^(--silent|--reporter=(default|verbose|dot|basic|tap))$/,
+  values: new Set(['-t', '--testNamePattern']),
+  positional: /^[\w.\\/-]+$/,
+};
+
 /** Extra commands for test-writer: build and run the test suites. */
 function testWriterProblem(program, args) {
   if (program === 'dotnet' && ['build', 'test', 'restore'].includes(args[0])) {
-    // MSBuild properties/targets can execute arbitrary commands (e.g. -p:PostBuildEvent=...).
-    if (args.some((a) => /^([-/]p:|[-/]property:|--property|[-/]t:|[-/]target:|--target)/i.test(a))) {
-      return 'MSBuild property/target overrides are not allowed (they can run arbitrary commands).';
-    }
-    return null;
+    return optionsProblem(`dotnet ${args[0]}`, args.slice(1), DOTNET_BUILD_OPTIONS);
   }
   if (program === 'npm') {
     if (args[0] === 'test' && args.length === 1) return null;
     if (args[0] === 'run' && ['test', 'lint', 'build', 'i18n:check'].includes(args[1]) && args.length === 2) return null;
   }
-  if (program === 'npx' && args[0] === 'vitest' && args[1] === 'run') return null;
+  if (program === 'npx' && args[0] === 'vitest' && args[1] === 'run') return optionsProblem('vitest run', args.slice(2), VITEST_RUN_OPTIONS);
   return readOnlyProblem(program, args);
 }
 
