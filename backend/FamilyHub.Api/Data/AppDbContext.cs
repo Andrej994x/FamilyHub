@@ -55,6 +55,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<VaultAttachment> VaultAttachments => Set<VaultAttachment>();
 
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+
+    public DbSet<Expense> Expenses => Set<Expense>();
+
+    public DbSet<ExpenseBudget> ExpenseBudgets => Set<ExpenseBudget>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

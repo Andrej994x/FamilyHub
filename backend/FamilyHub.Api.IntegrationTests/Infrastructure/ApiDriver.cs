@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FamilyHub.Api.DTOs.Auth;
+using FamilyHub.Api.DTOs.Expenses;
 using FamilyHub.Api.DTOs.Families;
 using FamilyHub.Api.DTOs.Invitations;
 using FamilyHub.Api.DTOs.Tasks;
@@ -80,6 +81,26 @@ public static class ApiDriver
             new CreateTaskRequest(title, null, assignee, null, TaskPriority.Medium));
         await response.EnsureStatusAsync(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<TaskResponse>())!;
+    }
+
+    /// <summary>Lists the family's active expense categories (creates the defaults on first use).</summary>
+    public static async Task<IReadOnlyList<ExpenseCategoryResponse>> GetExpenseCategoriesAsync(this TestUser user, Guid familyId)
+    {
+        var response = await user.Client.GetAsync($"/api/families/{familyId}/expense-categories");
+        await response.EnsureStatusAsync(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<List<ExpenseCategoryResponse>>())!;
+    }
+
+    /// <summary>Adds an expense in the family's first category, paid by <paramref name="paidByUserId"/> (default: the caller).</summary>
+    public static async Task<ExpenseResponse> CreateExpenseAsync(this TestUser user, Guid familyId, decimal amount = 1500m,
+        DateOnly? date = null, string? paidByUserId = null, Guid? categoryId = null)
+    {
+        categoryId ??= (await user.GetExpenseCategoriesAsync(familyId))[0].Id;
+        var response = await user.Client.PostAsJsonAsync($"/api/families/{familyId}/expenses",
+            new CreateExpenseRequest(amount, categoryId.Value, date ?? DateOnly.FromDateTime(DateTime.UtcNow),
+                paidByUserId ?? user.UserId, null));
+        await response.EnsureStatusAsync(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<ExpenseResponse>())!;
     }
 
     /// <summary>Asserts the status code, including the response body in the failure message.</summary>

@@ -155,6 +155,8 @@ try
     builder.Services.AddScoped<IOtherRecordService, OtherRecordService>();
     builder.Services.AddScoped<IVaultAttachmentService, VaultAttachmentService>();
     builder.Services.AddSingleton<IFamilyVaultStorage, FamilyVaultStorage>();
+    builder.Services.AddScoped<IExpenseService, ExpenseService>();
+    builder.Services.AddScoped<IExpenseCategoryService, ExpenseCategoryService>();
 
     // --- Reverse-proxy / TLS-termination support ---
     // In production the API typically runs behind a proxy or load balancer that terminates
