@@ -2,10 +2,10 @@
 
 FamilyHub has three automated suites. All three run in CI on every pull request (see [AGENTS.md → CI quality gates](../AGENTS.md#ci-quality-gates)).
 
-| Suite | Project | Runner | Needs | Count (Phase 4) |
+| Suite | Project | Runner | Needs | Count |
 |---|---|---|---|---|
-| Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 81 |
-| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 74 (31 need no Docker) |
+| Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 124 |
+| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 94 (31 need no Docker) |
 | Frontend tests | `frontend/familyhub-web/src/**/*.test.ts(x)` | Vitest + React Testing Library on jsdom | Node 22.13+ | 43 |
 
 Counts are test cases as reported by the runners (each `[Theory]`/`it.each` row counts once).
@@ -34,9 +34,9 @@ npm run test:watch  # watch mode while developing
 ```
 backend/
   FamilyHub.Api.UnitTests/
-    Validators/    FluentValidation rules (register, task, child, invitation, pickup, reminder offsets)
+    Validators/    FluentValidation rules (register, task, child, invitation, pickup, reminder offsets, expenses)
     Security/      TokenService (claims, expiry, signature), FamilyVaultStorage (size/type limits, path traversal)
-    Services/      Family, ChildProfile, FamilyTask, Notification services on EF Core InMemory
+    Services/      Family, ChildProfile, FamilyTask, Notification, Expense, ExpenseCategory services on EF Core InMemory
     Common/        ReminderCategoryDefaults, PushSettings
     Controllers/   ApiControllerBase (ErrorType → HTTP status, CurrentUserId)
     TestSupport/   TestDb (InMemory context + family builder), fakes
@@ -61,6 +61,14 @@ frontend/familyhub-web/
 - Service authorization order (family exists → member → role), Owner/Parent manage rights, lookups by `Id` + `FamilyId`.
 - Notification rules: the actor is never notified, duplicates collapse, role-filtered fan-out, the push flag is set only when a device accepted.
 - Task status, `CompletedAt`, and list ordering and filtering.
+- Expenses:
+  - validation: amount > 0, ≤ 10,000,000 and at most 2 decimals, no future or pre-2000 dates, the required year and month on the history filter, category names;
+  - Child denied even on reads, Member changes only their own expenses, Owner/Parent change any;
+  - lookups by `Id` + `FamilyId`, another family's category or payer rejected;
+  - archived categories kept on existing expenses but not newly chosen, and a former member kept as payer;
+  - history month bounds, ordering and filters;
+  - default categories seeded once per family, case-insensitive unique names, renamed defaults become custom;
+  - delete only when unused (also removes the category's budget rows), and the last active category is protected.
 
 **API integration tests** (the real pipeline: routing, JWT bearer auth, validators, services, EF Core on SQL Server)
 - **401:** no token on protected endpoints, a token signed with another key, an expired token, a wrong password.
@@ -68,13 +76,15 @@ frontend/familyhub-web/
   - an unknown family returns 404;
   - a member of another family gets 403 on the family, members, tasks, children, events, shopping lists and invitations;
   - another family's task through your own family route returns 404, and it is not deleted;
-  - a shopping item via another family's list returns 403 (a route without `familyId`).
+  - a shopping item via another family's list returns 403 (a route without `familyId`);
+  - another family's expense or expense category through your own family route returns 404 and is not changed, and another family's category or payer is a 400.
 - **Roles:**
   - Owner and Parent can manage children and invite; Member and Child cannot;
   - only the Owner renames the family;
   - every role can work with tasks;
   - the Owner cannot be removed and a Parent cannot remove members;
-  - removing a member unassigns their tasks and revokes access. This exercises `ExecuteUpdate`/`ExecuteDelete` on real SQL Server.
+  - removing a member unassigns their tasks and revokes access. This exercises `ExecuteUpdate`/`ExecuteDelete` on real SQL Server;
+  - expenses: Owner, Parent and Member can add and a Child gets 403 (including on reads); a Member can change only their own expenses; only Owner and Parent manage categories; removing a member keeps their expenses and payer name.
 - **Validation:**
   - ValidationProblem fields for register, task title and invitation role;
   - a task assigned to another family's member;
@@ -83,6 +93,7 @@ frontend/familyhub-web/
   - one family per user (409);
   - accepting an invitation while in another family (409).
 - **Workflow:** register → login → create family → invite → accept → create task (others notified, the creator is not) → complete → filter → delete → 404.
+- **Expenses workflow:** the default categories, add with a decimal amount (`1234.56`), list by month and payer, update, delete → 404. Per-field validation problems, a category in use rejected on delete (409, real FK) and archived instead with history kept, and unique category names (case-insensitive, per family).
 - **Safety:** see below.
 
 **Frontend tests**
@@ -138,7 +149,7 @@ The integration tests **never** use the local FamilyHub database, LocalDB, a sha
 
 **Independence.** Every test registers brand-new users (`<role>-<guid>@test.familyhub`, random passwords) and creates its own family, then works only with those. No test reads data another test created, and no cleanup between tests is needed. Tests share one container and one host for speed. They run sequentially in one xUnit collection, but don't depend on order.
 
-If Docker is not available, the fixture fails with a "Docker is required" message. The 43 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
+If Docker is not available, the fixture fails with a "Docker is required" message. The 63 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
 
 ### Docker setup
 - **Local (Windows/macOS):** Docker Desktop with Linux containers, started before `dotnet test`. The first run pulls the SQL Server image (about 1.5 GB). A full run then takes about 1–4 minutes, depending on image cache and machine.

@@ -78,6 +78,7 @@ All routes are under `/api`. Every controller has a class-level `[Authorize]` ex
 | Invitations | `families/{familyId}/invitations` (create, list, resend, cancel), `invitations/{token}/accept` |
 | Family features | `families/{familyId}/` `tasks`, `events`, `children`, `pickups`, `documents`, `shopping-lists`. Shopping items: `shopping-lists/{listId}/items` |
 | Family Vault | `families/{familyId}/vault/` `vehicles`, `pets`, `home`, `warranties`, `other`, `attachments` |
+| Family Expenses | `families/{familyId}/expenses` (list needs `year` + `month`; optional `categoryId`, `paidByUserId`), `families/{familyId}/expense-categories` (`includeArchived`) |
 | Per user | `notifications`, `push`, `reminder-preferences` |
 | Dev only | `POST reminders/run` (404 outside Development) |
 | Health | `GET health` |
@@ -90,12 +91,14 @@ Swagger (Development only) is the authoritative per-action reference.
   - Family core: `Family`, `FamilyMember`, `FamilyInvitation`, `ChildProfile`;
   - features: `FamilyTask`, `FamilyEvent`, `ShoppingList`/`ShoppingItem`, `PickupSchedule`, `FamilyDocument`;
   - vault records: `Vehicle`, `Pet`, `HomeRecord`, `Warranty`, `OtherRecord`, plus polymorphic `VaultAttachment`;
+  - expenses: `Expense`, `ExpenseCategory`, `ExpenseBudget` (the budget table exists; its API is not implemented yet);
   - notifications and reminders: `Notification`, `PushSubscription`, `ReminderHistory`, `UserReminderPreference`.
 - **Storage conventions:**
   - Enum columns are stored as strings (`HasConversion<string>()`, 13 occurrences), while JSON serializes enums as integers.
   - Timestamps are `DateTimeOffset`; calendar dates are `DateOnly`.
+  - Money is `decimal(12,2)` in MKD (no currency column), with a database check that amounts are positive.
   - Delete behaviors mix `Cascade`, `Restrict` and `NoAction`. Some member references are cleared in code before deletion (`FamilyService` member removal).
-- **Migrations:** `Data/Migrations/` holds 14 migrations, from `InitialIdentity` to `AddUserReminderPreferences`.
+- **Migrations:** `Data/Migrations/` holds 15 migrations, from `InitialIdentity` to `AddFamilyExpenses`.
   - The design-time factory `AppDbContextFactory` reads `appsettings.json`, user-secrets, then environment variables.
   - The EF CLI is pinned in `dotnet-tools.json` (8.0.11).
 
@@ -133,7 +136,7 @@ There are no authorization policies or role attributes (`AddAuthorization()` wit
 2. The caller is a member, otherwise 403.
 3. For manage operations, the caller's role is `Owner` or `Parent`, otherwise 403.
 
-Child entities are loaded by `Id` **and** `FamilyId` (for example `FamilyTaskService`). Routes without a `familyId` derive it from the parent entity. Shopping item operations load the list (404 if missing), then check membership in the list's `FamilyId` (403) in `ShoppingListService`. These checks are repeated per service (`AuthorizeAsync`/`GetMembershipAsync` helpers, and `VaultServiceBase.AuthorizeAsync` for the vault). There is no shared authorization component.
+Child entities are loaded by `Id` **and** `FamilyId` (for example `FamilyTaskService`). Routes without a `familyId` derive it from the parent entity. Shopping item operations load the list (404 if missing), then check membership in the list's `FamilyId` (403) in `ShoppingListService`. These checks are repeated per service (`AuthorizeAsync`/`GetMembershipAsync` helpers, `VaultServiceBase.AuthorizeAsync` for the vault, and `ExpenseServiceBase.AuthorizeAsync` for expenses, which also denies the `Child` role). There is no shared authorization component.
 
 Roles (`Models/Enums/FamilyRole.cs`): `Owner`, `Parent`, `Member`, `Child`. A user can belong to **only one family** (409 otherwise).
 
@@ -146,6 +149,9 @@ Roles (`Models/Enums/FamilyRole.cs`): `Owner`, `Parent`, `Member`, `Child`. A us
 | Create, edit or delete pickups; take over a *rejected* pickup | Owner, Parent |
 | Confirm, reject or complete a pickup | Only the assigned member |
 | Tasks, events, shopping lists | Any family member |
+| View and add expenses; view categories | Owner, Parent, Member (**a Child gets 403, even on reads**) |
+| Edit or delete an expense | Owner, Parent: any expense. Member: only expenses they created |
+| Create, rename, archive, restore or delete expense categories | Owner, Parent |
 | Notifications, push subscriptions, reminder preferences | The user's own records only |
 
 **Invitations** (`Services/InvitationService.cs`):

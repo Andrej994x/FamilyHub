@@ -134,6 +134,137 @@ namespace FamilyHub.Api.Data.Migrations
                     b.ToTable("ChildProfiles", (string)null);
                 });
 
+            modelBuilder.Entity("FamilyHub.Api.Models.Expense", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PaidByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("PaidByUserId");
+
+                    b.HasIndex("FamilyId", "Date");
+
+                    b.ToTable("Expenses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Expenses_Amount_Positive", "[Amount] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyHub.Api.Models.ExpenseBudget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UpdatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("FamilyId", "CategoryId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("ExpenseBudgets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ExpenseBudgets_Amount_Positive", "[Amount] IS NULL OR [Amount] > 0");
+
+                            t.HasCheckConstraint("CK_ExpenseBudgets_EffectiveFrom_FirstOfMonth", "DATEPART(day, [EffectiveFrom]) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyHub.Api.Models.ExpenseCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DefaultCategory")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ExpenseCategories", (string)null);
+                });
+
             modelBuilder.Entity("FamilyHub.Api.Models.Family", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1200,6 +1331,72 @@ namespace FamilyHub.Api.Data.Migrations
                 {
                     b.HasOne("FamilyHub.Api.Models.Family", "Family")
                         .WithMany("Children")
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Family");
+                });
+
+            modelBuilder.Entity("FamilyHub.Api.Models.Expense", b =>
+                {
+                    b.HasOne("FamilyHub.Api.Models.ExpenseCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyHub.Api.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyHub.Api.Models.Family", "Family")
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyHub.Api.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("PaidByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Family");
+                });
+
+            modelBuilder.Entity("FamilyHub.Api.Models.ExpenseBudget", b =>
+                {
+                    b.HasOne("FamilyHub.Api.Models.ExpenseCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyHub.Api.Models.Family", "Family")
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyHub.Api.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Family");
+                });
+
+            modelBuilder.Entity("FamilyHub.Api.Models.ExpenseCategory", b =>
+                {
+                    b.HasOne("FamilyHub.Api.Models.Family", "Family")
+                        .WithMany()
                         .HasForeignKey("FamilyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
