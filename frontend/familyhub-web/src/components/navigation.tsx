@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react';
+import { canAccessExpenses } from '../utils/roles';
 
 export interface NavItem {
   labelKey: string;
   path: string;
   icon: ReactNode;
+  /** Hides the item for roles that can't use it (cosmetic; the API enforces access). */
+  visible?: (role: number | null) => boolean;
 }
 
 const svgProps = {
@@ -80,6 +83,16 @@ export const navItems: NavItem[] = [
     ),
   },
   {
+    labelKey: 'nav.expenses',
+    path: '/expenses',
+    visible: canAccessExpenses,
+    icon: (
+      <svg {...svgProps}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+      </svg>
+    ),
+  },
+  {
     labelKey: 'nav.settings',
     path: '/settings',
     icon: (
@@ -90,3 +103,8 @@ export const navItems: NavItem[] = [
     ),
   },
 ];
+
+/** The navigation items shown to a member with the given role. */
+export function visibleNavItems(role: number | null): NavItem[] {
+  return navItems.filter((item) => !item.visible || item.visible(role));
+}

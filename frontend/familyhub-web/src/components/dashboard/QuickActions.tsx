@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useFamily } from '../../hooks/useFamily';
+import { canAccessExpenses } from '../../utils/roles';
 
 interface QuickAction {
   labelKey: string;
   to: string;
   icon: ReactNode;
+  /** Hides the action for roles that can't use it (cosmetic; the API enforces access). */
+  visible?: (role: number | null) => boolean;
 }
 
 const iconProps = {
@@ -53,21 +57,36 @@ const actions: QuickAction[] = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
       </svg>
     ),
+  },  {
+    labelKey: 'dashboard.quick.addExpense',
+    to: '/expenses?add=1',
+    visible: canAccessExpenses,
+    icon: (
+      <svg {...iconProps}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
   },
 ];
 
 export function QuickActions() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { role } = useFamily();
+  const visible = actions.filter((action) => !action.visible || action.visible(role));
+  // Five actions don't fit a 4-column row; on the 2-column phone grid an odd last one spans the row.
+  const columns = visible.length === 5 ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-4';
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {actions.map((action) => (
+    <div className={`grid grid-cols-2 gap-3 ${columns}`}>
+      {visible.map((action, index) => (
         <button
           key={action.to}
           type="button"
           onClick={() => navigate(action.to)}
-          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:border-brand-300 hover:bg-brand-50/40"
+          className={`flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:border-brand-300 hover:bg-brand-50/40 ${
+            visible.length % 2 === 1 && index === visible.length - 1 ? 'col-span-2 sm:col-span-1' : ''
+          }`}
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
             {action.icon}

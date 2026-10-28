@@ -32,5 +32,15 @@ export type {
 export { NotificationType } from './notifications';
 export type { NotificationResponse, UnreadCountResponse } from './notifications';
 
+export { DefaultExpenseCategory } from './expenses';
+export type {
+  ExpenseCategoryResponse,
+  ExpenseResponse,
+  ExpenseRequest,
+  ExpenseFilter,
+  CategorySpendingResponse,
+  ExpenseSummaryResponse,
+} from './expenses';
+
 export { DocumentType } from './vault';
 export type { VaultRecord, VaultAttachment } from './vault';

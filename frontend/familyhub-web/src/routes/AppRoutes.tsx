@@ -3,6 +3,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { PublicRoute } from './PublicRoute';
 import { FamilyGate } from './FamilyGate';
 import { RequireFamily } from './RequireFamily';
+import { RequireExpensesAccess } from './RequireExpensesAccess';
 import { AppLayout } from '../layouts/AppLayout';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
@@ -17,6 +18,7 @@ import Notifications from '../pages/Notifications';
 import ReminderSettings from '../pages/ReminderSettings';
 import SystemSettings from '../pages/SystemSettings';
 import FamilyVault from '../pages/FamilyVault';
+import Expenses from '../pages/Expenses';
 import AcceptInvitation from '../pages/AcceptInvitation';
 
 export function AppRoutes() {
@@ -47,6 +49,9 @@ export function AppRoutes() {
               <Route path="/family" element={<FamilyMembersPage />} />
               <Route path="/pickups" element={<Pickups />} />
               <Route path="/vault" element={<FamilyVault />} />
+              <Route element={<RequireExpensesAccess />}>
+                <Route path="/expenses" element={<Expenses />} />
+              </Route>
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/reminders" element={<ReminderSettings />} />
               <Route path="/settings" element={<SystemSettings />} />
