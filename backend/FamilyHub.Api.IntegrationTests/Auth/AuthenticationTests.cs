@@ -22,6 +22,9 @@ public class AuthenticationTests(FamilyHubApiFixture fixture)
     [InlineData("GET", "/api/families/7d7c5e0e-5a8f-4a50-9f2e-3f0f6c8b1a11/tasks")]
     [InlineData("POST", "/api/families")]
     [InlineData("GET", "/api/notifications")]
+    [InlineData("GET", "/api/families/7d7c5e0e-5a8f-4a50-9f2e-3f0f6c8b1a11/expenses/summary?year=2026&month=10")]
+    [InlineData("GET", "/api/families/7d7c5e0e-5a8f-4a50-9f2e-3f0f6c8b1a11/expense-budgets?year=2026&month=10")]
+    [InlineData("PUT", "/api/families/7d7c5e0e-5a8f-4a50-9f2e-3f0f6c8b1a11/expense-budgets")]
     public async Task Protected_endpoints_return_401_without_a_token(string method, string path)
     {
         var response = await fixture.CreateClient().SendAsync(new HttpRequestMessage(new HttpMethod(method), path));

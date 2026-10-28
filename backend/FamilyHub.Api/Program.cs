@@ -157,6 +157,7 @@ try
     builder.Services.AddSingleton<IFamilyVaultStorage, FamilyVaultStorage>();
     builder.Services.AddScoped<IExpenseService, ExpenseService>();
     builder.Services.AddScoped<IExpenseCategoryService, ExpenseCategoryService>();
+    builder.Services.AddScoped<IExpenseBudgetService, ExpenseBudgetService>();
 
     // --- Reverse-proxy / TLS-termination support ---
     // In production the API typically runs behind a proxy or load balancer that terminates

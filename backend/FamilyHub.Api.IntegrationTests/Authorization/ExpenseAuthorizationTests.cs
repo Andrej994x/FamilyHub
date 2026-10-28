@@ -20,6 +20,8 @@ public class ExpenseAuthorizationTests(FamilyHubApiFixture fixture)
 
     private static string Categories(Guid familyId) => $"/api/families/{familyId}/expense-categories";
 
+    private static string Budgets(Guid familyId) => $"/api/families/{familyId}/expense-budgets";
+
     [Theory]
     [InlineData(FamilyRole.Parent, HttpStatusCode.Created)]
     [InlineData(FamilyRole.Member, HttpStatusCode.Created)]
@@ -39,6 +41,8 @@ public class ExpenseAuthorizationTests(FamilyHubApiFixture fixture)
     [Theory]
     [InlineData("/expenses?year=2026&month=10")]
     [InlineData("/expense-categories")]
+    [InlineData("/expenses/summary?year=2026&month=10")]
+    [InlineData("/expense-budgets?year=2026&month=10")]
     public async Task A_child_cannot_even_read_family_expenses(string suffix)
     {
         var family = await fixture.CreateFamilyWithOwnerAsync();
@@ -110,6 +114,74 @@ public class ExpenseAuthorizationTests(FamilyHubApiFixture fixture)
 
         Assert.Equal(expected, create.StatusCode);
         Assert.Equal(expected == HttpStatusCode.Created ? HttpStatusCode.OK : HttpStatusCode.Forbidden, archive.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(FamilyRole.Parent, HttpStatusCode.OK)]
+    [InlineData(FamilyRole.Member, HttpStatusCode.Forbidden)]
+    [InlineData(FamilyRole.Child, HttpStatusCode.Forbidden)]
+    public async Task Only_owners_and_parents_set_budgets(FamilyRole role, HttpStatusCode expected)
+    {
+        var family = await fixture.CreateFamilyWithOwnerAsync();
+        var user = await fixture.AddMemberAsync(family, role);
+        var set = await family.Owner.Client.PutAsJsonAsync(Budgets(family.Id), new SetExpenseBudgetsRequest(2026, 10, 50_000m, null));
+        await set.EnsureStatusAsync(HttpStatusCode.OK);
+
+        var response = await user.Client.PutAsJsonAsync(Budgets(family.Id), new SetExpenseBudgetsRequest(2026, 10, 1m, null));
+
+        Assert.Equal(expected, response.StatusCode);
+        var budget = await family.Owner.Client.GetFromJsonAsync<ExpenseBudgetResponse>($"{Budgets(family.Id)}?year=2026&month=10");
+        Assert.Equal(expected == HttpStatusCode.OK ? 1m : 50_000m, budget!.OverallAmount);
+    }
+
+    [Fact]
+    public async Task Budgets_and_the_summary_of_an_unknown_family_return_404()
+    {
+        var user = await fixture.RegisterAndLoginAsync();
+        var familyId = Guid.NewGuid();
+
+        var summary = await user.Client.GetAsync($"{Expenses(familyId)}/summary?year=2026&month=10");
+        var view = await user.Client.GetAsync($"{Budgets(familyId)}?year=2026&month=10");
+        var set = await user.Client.PutAsJsonAsync(Budgets(familyId), new SetExpenseBudgetsRequest(2026, 10, 1m, null));
+
+        Assert.All([summary, view, set], r => Assert.Equal(HttpStatusCode.NotFound, r.StatusCode));
+        Assert.Equal("Family not found.", (await set.Content.ReadFromJsonAsync<ErrorResponse>())!.Message);
+    }
+
+    [Fact]
+    public async Task Members_can_view_budgets_and_the_summary()
+    {
+        var family = await fixture.CreateFamilyWithOwnerAsync();
+        var member = await fixture.AddMemberAsync(family, FamilyRole.Member);
+        var set = await family.Owner.Client.PutAsJsonAsync(Budgets(family.Id), new SetExpenseBudgetsRequest(2026, 10, 50_000m, null));
+        await set.EnsureStatusAsync(HttpStatusCode.OK);
+
+        var budget = await member.Client.GetFromJsonAsync<ExpenseBudgetResponse>($"{Budgets(family.Id)}?year=2026&month=10");
+        var summary = await member.Client.GetFromJsonAsync<ExpenseSummaryResponse>($"{Expenses(family.Id)}/summary?year=2026&month=10");
+
+        Assert.Equal(50_000m, budget!.OverallAmount);
+        Assert.Equal((0m, 50_000m), (summary!.TotalSpent, summary.Budget));
+    }
+
+    [Fact]
+    public async Task Another_familys_budgets_cannot_be_changed_and_its_categories_cannot_be_budgeted()
+    {
+        var victim = await fixture.CreateFamilyWithOwnerAsync();
+        var attacker = await fixture.CreateFamilyWithOwnerAsync();
+        var victimCategory = (await victim.Owner.GetExpenseCategoriesAsync(victim.Id))[0];
+        var set = await victim.Owner.Client.PutAsJsonAsync(Budgets(victim.Id), new SetExpenseBudgetsRequest(2026, 10, 50_000m, null));
+        await set.EnsureStatusAsync(HttpStatusCode.OK);
+
+        var overwrite = await attacker.Owner.Client.PutAsJsonAsync(Budgets(victim.Id), new SetExpenseBudgetsRequest(2026, 10, 1m, null));
+        var foreignCategory = await attacker.Owner.Client.PutAsJsonAsync(Budgets(attacker.Id),
+            new SetExpenseBudgetsRequest(2026, 10, 10m, [new CategoryBudgetRequest(victimCategory.Id, 5m)]));
+
+        Assert.Equal(HttpStatusCode.Forbidden, overwrite.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, foreignCategory.StatusCode);
+        var victimBudget = await victim.Owner.Client.GetFromJsonAsync<ExpenseBudgetResponse>($"{Budgets(victim.Id)}?year=2026&month=10");
+        Assert.Equal((50_000m, 0), (victimBudget!.OverallAmount!.Value, victimBudget.Categories.Count));
+        var attackerBudget = await attacker.Owner.Client.GetFromJsonAsync<ExpenseBudgetResponse>($"{Budgets(attacker.Id)}?year=2026&month=10");
+        Assert.Null(attackerBudget!.OverallAmount);
     }
 
     [Fact]

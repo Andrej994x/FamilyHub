@@ -36,6 +36,8 @@ public class FamilyAccessTests(FamilyHubApiFixture fixture)
     [InlineData("/invitations")]
     [InlineData("/expenses?year=2026&month=10")]
     [InlineData("/expense-categories")]
+    [InlineData("/expenses/summary?year=2026&month=10")]
+    [InlineData("/expense-budgets?year=2026&month=10")]
     public async Task A_member_of_another_family_gets_403_for_every_family_resource(string suffix)
     {
         var victim = await fixture.CreateFamilyWithOwnerAsync();
