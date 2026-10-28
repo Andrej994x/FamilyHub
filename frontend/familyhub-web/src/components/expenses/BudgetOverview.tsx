@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ExpenseSummaryResponse } from '../../types';
 import { formatMoney } from '../../utils/money';
@@ -5,10 +6,12 @@ import { usageColor } from '../../utils/expenseCategories';
 
 interface BudgetOverviewProps {
   summary: ExpenseSummaryResponse;
+  /** Where Owners and Parents set a budget; omitted for members who can't. */
+  setBudgetHref?: string;
 }
 
 /** The month's spending against the family budget, or the spending alone when there is no budget. */
-export function BudgetOverview({ summary }: BudgetOverviewProps) {
+export function BudgetOverview({ summary, setBudgetHref }: BudgetOverviewProps) {
   const { t, i18n } = useTranslation();
   const money = (amount: number) => formatMoney(amount, i18n.language);
   const { totalSpent, budget, remaining, usagePercent, expenseCount } = summary;
@@ -41,6 +44,11 @@ export function BudgetOverview({ summary }: BudgetOverviewProps) {
         ) : (
           <div className="sm:col-span-2 sm:self-center">
             <p className="text-sm text-gray-500">{t('expenses.summary.noBudget')}</p>
+            {setBudgetHref && (
+              <Link to={setBudgetHref} className="mt-1 inline-block text-sm font-medium text-brand-600 hover:underline">
+                {t('expenses.summary.setBudget')}
+              </Link>
+            )}
           </div>
         )}
       </div>

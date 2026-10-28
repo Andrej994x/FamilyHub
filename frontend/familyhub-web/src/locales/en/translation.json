@@ -545,6 +545,7 @@
       "remaining": "Remaining",
       "overBudget": "Over budget by",
       "noBudget": "No monthly budget is set for this month.",
+      "setBudget": "Set a budget",
       "usage": "{{percent}}% of the budget used",
       "expenseCount_one": "{{count}} expense",
       "expenseCount_other": "{{count}} expenses"
@@ -599,6 +600,47 @@
       "loadFailed": "Could not load expenses.",
       "saveFailed": "Could not save the expense.",
       "deleteFailed": "Could not delete the expense."
+    },
+    "settings": {
+      "title": "Budgets & categories",
+      "subtitle": "Set the family's monthly budgets and organise expense categories.",
+      "back": "Back to expenses",
+      "readOnly": "You can view budgets and categories. Only an Owner or Parent can change them.",
+      "budgets": {
+        "title": "Monthly budget",
+        "appliesFrom": "Changes apply from {{month}} until you change them again. Earlier months keep their budgets.",
+        "overall": "Overall family budget (MKD)",
+        "categoryBudgets": "Category budgets (MKD)",
+        "emptyHint": "Leave a field empty for no budget.",
+        "none": "No budget",
+        "noneSet": "No budgets are set for this month.",
+        "categoryTotal": "Category budgets total {{amount}}",
+        "save": "Save budgets",
+        "saved": "Budgets saved.",
+        "archivedRemoved": "Budgets of archived categories are removed from this month when you save."
+      },
+      "categories": {
+        "title": "Categories",
+        "add": "Add category",
+        "addTitle": "Add category",
+        "renameTitle": "Rename category",
+        "name": "Name",
+        "nameInvalid": "Enter a name of up to 50 characters.",
+        "builtInHint": "A renamed built-in category shows your name in every language.",
+        "submit": "Save",
+        "rename": "Rename",
+        "archive": "Archive",
+        "restore": "Restore",
+        "archivedTitle": "Archived categories ({{count}})",
+        "archivedHint": "Archived categories stay on past expenses but can't be used for new ones.",
+        "deleteConfirm": "Delete this category? This only works when no expense uses it; otherwise archive it."
+      },
+      "errors": {
+        "loadFailed": "Could not load budgets and categories.",
+        "saveFailed": "Could not save the budgets.",
+        "categorySaveFailed": "Could not save the category.",
+        "categoryDeleteFailed": "Could not delete the category."
+      }
     },
     "defaultCategories": {
       "foodGroceries": "Food & Groceries",

@@ -4,7 +4,7 @@ import { Modal } from '../Modal';
 import { expenseService } from '../../services/expenseService';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { categoryLabel } from '../../utils/expenseCategories';
-import { MAX_AMOUNT, parseAmount } from '../../utils/money';
+import { MAX_AMOUNT, parseAmount, toAmountInput } from '../../utils/money';
 import { todayDateOnly } from '../../utils/month';
 import type { ExpenseCategoryResponse, ExpenseResponse, FamilyMemberResponse } from '../../types';
 
@@ -22,12 +22,6 @@ interface ExpenseDialogProps {
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
-
-/** The amount as the user would type it, e.g. 1500 or 1500,50 in Macedonian. */
-function toAmountInput(amount: number, language: string): string {
-  const text = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-  return language === 'mk' ? text.replace('.', ',') : text;
-}
 
 export function ExpenseDialog({
   open,

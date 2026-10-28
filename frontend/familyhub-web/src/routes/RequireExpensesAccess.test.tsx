@@ -5,15 +5,16 @@ import { RequireExpensesAccess } from './RequireExpensesAccess';
 import { FamilyRole } from '../types';
 import { renderWithFamily } from '../test/providers';
 
-function renderAt(role: number) {
+function renderAt(role: number, path = '/expenses') {
   renderWithFamily(
     <Routes>
       <Route path="/dashboard" element={<p>dashboard page</p>} />
       <Route element={<RequireExpensesAccess />}>
         <Route path="/expenses" element={<p>expenses page</p>} />
+        <Route path="/expenses/settings" element={<p>settings page</p>} />
       </Route>
     </Routes>,
-    { role, initialEntries: ['/expenses'] },
+    { role, initialEntries: [path] },
   );
 }
 
@@ -29,5 +30,12 @@ describe('RequireExpensesAccess', () => {
 
     expect(screen.getByText('dashboard page')).toBeInTheDocument();
     expect(screen.queryByText('expenses page')).not.toBeInTheDocument();
+  });
+
+  it('also keeps children out of budgets & categories', () => {
+    renderAt(FamilyRole.Child, '/expenses/settings');
+
+    expect(screen.getByText('dashboard page')).toBeInTheDocument();
+    expect(screen.queryByText('settings page')).not.toBeInTheDocument();
   });
 });

@@ -26,3 +26,9 @@ export function parseAmount(input: string): number | null {
   }
   return Number(compact.replace(',', '.'));
 }
+
+/** An amount as the user would type it in an input: 1500, 1500.50, or 1500,50 in Macedonian. */
+export function toAmountInput(amount: number, language: string): string {
+  const text = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  return language === 'mk' ? text.replace('.', ',') : text;
+}

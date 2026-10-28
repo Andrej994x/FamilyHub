@@ -67,6 +67,34 @@ export interface CategorySpendingResponse {
   usagePercent: number | null;
 }
 
+/**
+ * The budgets in effect for a month (MKD). A budget applies from the month it was set until it is
+ * changed. `overallAmount` is null without an overall budget; unbudgeted categories are not listed.
+ */
+export interface ExpenseBudgetResponse {
+  year: number;
+  month: number;
+  overallAmount: number | null;
+  categories: { categoryId: string; amount: number }[];
+}
+
+/** The complete set of budgets from a month on; a category left out loses its budget from then. */
+export interface SetExpenseBudgetsRequest {
+  year: number;
+  month: number;
+  overallAmount: number | null;
+  categories: { categoryId: string; amount: number | null }[];
+}
+
+export interface ExpenseCategoryRequest {
+  name: string;
+}
+
+export interface UpdateExpenseCategoryRequest {
+  name: string;
+  isArchived: boolean;
+}
+
 /** One month's dashboard numbers. Budget fields are null when no budget is in effect. */
 export interface ExpenseSummaryResponse {
   year: number;
