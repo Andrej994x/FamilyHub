@@ -41,7 +41,7 @@ FamilyHub/
 ├── docs/
 │   ├── ARCHITECTURE.md         # system architecture
 │   └── TESTING.md              # test suites, database isolation, gaps
-├── .claude/                    # Claude Code guardrails (permissions + PreToolUse guard)
+├── .claude/                    # Claude Code guardrails, skills and subagents (see .claude/README.md)
 ├── .github/                    # CI workflow and PR template
 ├── AGENTS.md                   # engineering conventions (shared by people and AI agents)
 ├── CLAUDE.md                   # Claude Code-specific instructions

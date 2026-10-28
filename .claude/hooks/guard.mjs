@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { agentPolicy } from './agent-policy.mjs';
 
 const DENY = 'deny';
 const ASK = 'ask';
@@ -24,7 +25,7 @@ const deny = (reason) => ({ action: DENY, reason });
 const ask = (reason) => ({ action: ASK, reason: `${reason} ${APPROVAL}` });
 
 /** Keeps the most severe decision; reasons of equally severe decisions are combined. */
-function strongest(decisions) {
+export function strongest(decisions) {
   let best = null;
   for (const d of decisions) {
     if (!d) continue;
@@ -42,7 +43,7 @@ function strongest(decisions) {
 const HEREDOC = /(?<!<)<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/;
 
 /** Removes heredoc bodies; returns the remaining text and the bodies keyed by line index. */
-function extractHeredocs(command) {
+export function extractHeredocs(command) {
   const lines = command.split(/\r?\n/);
   const kept = [];
   const bodies = new Map();
@@ -62,7 +63,7 @@ function extractHeredocs(command) {
  * Tokenizes shell text into segments. `dialect` is "bash" (backslash escapes) or "powershell"
  * (backslash is literal, backtick escapes). Returns [{ argv, redirects, line }].
  */
-function tokenize(text, dialect) {
+export function tokenize(text, dialect) {
   const segments = [];
   let argv = [];
   let redirects = [];
@@ -159,12 +160,12 @@ function tokenize(text, dialect) {
 const WRAPPERS = new Set(['sudo', 'env', 'timeout', 'time', 'nice', 'nohup', 'stdbuf', 'command', 'builtin', 'exec', 'xargs', 'noglob']);
 
 /** Program name without directory or Windows extension, lower-cased. */
-function programName(token) {
+export function programName(token) {
   return token.split(/[\\/]/).pop().toLowerCase().replace(/\.(exe|cmd|bat|ps1)$/, '');
 }
 
 /** Drops leading VAR=value assignments and wrapper commands (with their options). */
-function unwrap(argv) {
+export function unwrap(argv) {
   let a = [...argv];
   for (;;) {
     while (a.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(a[0])) a.shift();
@@ -253,7 +254,7 @@ function gitRules(argv) {
   }
 }
 
-function ghRules(argv) {
+export function ghRules(argv) {
   const [group = '', sub = ''] = argv.slice(1).map((x) => x.toLowerCase());
   const args = argv.slice(3);
   if (group === 'pr' && sub === 'merge') return ask('Merging a pull request.');
@@ -289,7 +290,7 @@ const API_START = ask(
   'Starting the FamilyHub API. In Development it applies EF Core migrations and seeds sample data into the configured database.',
 );
 
-const normalizePath = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '');
+export const normalizePath = (p) => String(p).replace(/\\/g, '/').replace(/\/+$/, '');
 
 /** Resolves a `cd` target against the current directory (which may be unknown). */
 function resolveDir(base, target) {
@@ -299,7 +300,7 @@ function resolveDir(base, target) {
 }
 
 /** Value of the first matching option (`--opt value` or `--opt=value`). */
-function optionValue(args, ...names) {
+export function optionValue(args, ...names) {
   for (let i = 0; i < args.length; i++) {
     const lower = args[i].toLowerCase();
     for (const name of names) {
@@ -489,8 +490,7 @@ export function evaluateFileEdit(toolName, toolInput = {}) {
   return null;
 }
 
-/** Entry point used by the hook and the tests. Returns null or { action, reason }. */
-export function evaluate(input) {
+function baseDecision(input) {
   const tool = input?.tool_name;
   const toolInput = input?.tool_input || {};
   const cwd = typeof input?.cwd === 'string' ? input.cwd : null;
@@ -500,9 +500,21 @@ export function evaluate(input) {
   return null;
 }
 
+/**
+ * Entry point used by the hook and the tests. Returns null or { action, reason }.
+ * Inside a restricted subagent (agent_type), the fail-closed agent policy is applied on top.
+ */
+export function evaluate(input) {
+  return strongest([baseDecision(input), agentPolicy(input)]);
+}
+
+const RESTRICTED_AGENT_IN_RAW_INPUT = /"agent_type"\s*:\s*"(security-reviewer|test-writer)"/;
+
 function main() {
+  let raw = '';
   try {
-    const decision = evaluate(JSON.parse(readFileSync(0, 'utf8') || '{}'));
+    raw = readFileSync(0, 'utf8');
+    const decision = evaluate(JSON.parse(raw || '{}'));
     if (decision) {
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
@@ -514,8 +526,13 @@ function main() {
     }
     process.exit(0);
   } catch (error) {
-    // Non-blocking failure (exit 1): Claude Code shows a hook-error notice and the permission
-    // deny rules in .claude/settings.json remain the backstop. See .claude/README.md.
+    // Restricted subagents fail closed: an error while evaluating their call blocks it.
+    if (RESTRICTED_AGENT_IN_RAW_INPUT.test(raw)) {
+      process.stderr.write(`FamilyHub guard: policy error for a restricted agent (${error?.message || error}); blocking.\n`);
+      process.exit(2);
+    }
+    // Main session: non-blocking failure (exit 1). Claude Code shows a hook-error notice and the
+    // permission deny rules in .claude/settings.json remain the backstop. See .claude/README.md.
     process.stderr.write(`FamilyHub guard internal error: ${error?.message || error}\n`);
     process.exit(1);
   }

@@ -24,7 +24,7 @@ Run from the repository root unless a directory is given.
 | Backend unit tests | `cd backend && dotnet test FamilyHub.Api.UnitTests` |
 | API integration tests (Docker required; disposable SQL Server via Testcontainers) | `cd backend && dotnet test FamilyHub.Api.IntegrationTests` |
 | Frontend tests (Vitest) | `cd frontend/familyhub-web && npm test` |
-| Claude Code guard tests | `node --test .claude/hooks/guard.test.mjs` |
+| Claude Code guard, agent policy and config tests | `node --test .claude/hooks/guard.test.mjs .claude/hooks/agent-policy.test.mjs .claude/hooks/config.test.mjs` |
 
 Always use the pinned `dotnet tool run dotnet-ef`, never a global `dotnet ef` of another version.
 
@@ -92,7 +92,10 @@ Classify every task before starting. The highest matching level wins; if unsure,
 
 **Integration-test database rule:** integration tests only ever use the disposable Testcontainers SQL Server created by `FamilyHubApiFixture`, checked by `TestDatabaseGuard`. Never point tests at LocalDB, the local FamilyHub database, a shared server, or a CI or production connection string, and never weaken the guard to make a test run.
 
-**Codex note:** Codex is not configured in this repository yet. Until it is, the owner runs the independent Codex review manually and records the outcome in the PR.
+**Codex note:**
+- The independent Codex review is run by the owner: `codex review --base origin/main` (Codex CLI), with the outcome recorded in the PR.
+- For complex S2/S3 changes, an optional risk-based brief can be prepared first, with Claude Code's `/codex-review`, and passed to Codex. The brief is written to `.codex-review/` and is never committed.
+- Codex is an independent reviewer; it never replaces automated tests.
 
 ## CI quality gates
 `.github/workflows/ci.yml` runs on every PR to `main` and on pushes to `main`. The `main` ruleset requires all five checks to pass on a branch that is up to date with `main`:
@@ -100,7 +103,7 @@ Classify every task before starting. The highest matching level wins; if unsure,
 1. **Backend build**: Release build with warnings as errors (including both test projects), then the backend unit tests.
 2. **EF Core migrations**: first runs the API integration tests against a disposable Testcontainers SQL Server. Then it fails if the model has changes without a migration, applies all migrations to an empty SQL Server 2022, and re-runs the idempotent script.
 3. **Frontend build & lint**: `npm ci`, oxlint, Vitest tests, `tsc -b`, Vite build.
-4. **i18n parity (en/mk)**: identical keys and placeholders, no empty values. This job also runs the Claude Code guard tests (`node --test .claude/hooks/guard.test.mjs`).
+4. **i18n parity (en/mk)**: identical keys and placeholders, no empty values. This job also runs the Claude Code guard, agent-policy and configuration tests (the three `.claude/hooks/*.test.mjs` files).
 5. **Secret scan (gitleaks)**: full git history, with `.gitleaksignore` for rotated findings only.
 
 Renaming a CI job breaks the required check in the ruleset. Treat job names as part of the contract (S2).
