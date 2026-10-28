@@ -250,7 +250,12 @@ Downloads go through the authorized `VaultAttachmentsController` (`PhysicalFile`
 - **Logging:** Serilog writes to the console and to `logs/familyhub-.log` (daily rolling files, 7 kept, gitignored).
 
 ## 11. Quality gates
-The CI jobs in `.github/workflows/ci.yml` and the `main` ruleset are described in [AGENTS.md → CI quality gates](../AGENTS.md#ci-quality-gates). There are **no automated tests**: no backend test project, and no frontend test runner or `test` script.
+The CI jobs in `.github/workflows/ci.yml` and the `main` ruleset are described in [AGENTS.md → CI quality gates](../AGENTS.md#ci-quality-gates). Automated tests are described in [TESTING.md](TESTING.md):
+- backend unit tests (xUnit, `backend/FamilyHub.Api.UnitTests`);
+- API integration tests: `WebApplicationFactory<Program>` against a disposable Testcontainers SQL Server (`backend/FamilyHub.Api.IntegrationTests`);
+- frontend tests (Vitest + React Testing Library, `npm test`).
+
+`Program.cs` ends with `public partial class Program { }` only so that `WebApplicationFactory` can reference the entry point.
 
 ## 12. Known security risks (separate S3 review required)
 These describe the current behavior. They are **not** fixed by this documentation. Any change to them is an S3 task: it needs its own plan, owner approval, security review and independent Codex review (see [AGENTS.md](../AGENTS.md#required-process-by-level)).
@@ -283,7 +288,8 @@ These describe the current behavior. They are **not** fixed by this documentatio
 
 ## 13. Known gaps observed in the code
 These are recorded facts, not planned work:
-- No automated tests. TypeScript `strict` is off.
+- Automated tests cover representative paths only. There are no E2E/browser tests, and several feature areas have no integration tests yet (see [TESTING.md → Known limitations](TESTING.md#known-limitations-and-gaps)). TypeScript `strict` is off.
+- `UpdateReminderPreferenceRequestValidator` throws on a `null` offsets array. It's unreachable through the API today, because `[ApiController]` returns 400 first (see TESTING.md).
 - No refresh tokens or token revocation. The JWT is kept in `localStorage`.
 - No account lockout or rate limiting on login and register.
 - Push: 401/403 responses don't deactivate subscriptions, and stale-key subscriptions are reused on the client.

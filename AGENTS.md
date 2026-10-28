@@ -6,7 +6,7 @@ Architecture reference: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Setup: [RE
 ## Project at a glance
 - `backend/FamilyHub.Api`: ASP.NET Core 8 Web API, EF Core 8, SQL Server, ASP.NET Core Identity + JWT.
 - `frontend/familyhub-web`: React 19 + TypeScript + Vite 8 PWA, Tailwind CSS v4, i18next (English `en`, Macedonian `mk`).
-- No automated tests exist yet. Do not claim test coverage. Verify behavior by building, running and exercising the app.
+- Automated tests: backend unit tests (`backend/FamilyHub.Api.UnitTests`), API integration tests against a disposable Testcontainers SQL Server (`backend/FamilyHub.Api.IntegrationTests`, needs Docker) and frontend Vitest tests. See [docs/TESTING.md](docs/TESTING.md) for what they cover and what they don't. Claim coverage only for behavior a test actually exercises.
 
 ## Commands
 Run from the repository root unless a directory is given.
@@ -21,6 +21,9 @@ Run from the repository root unless a directory is given.
 | Frontend install / lint / build | `cd frontend/familyhub-web && npm ci && npm run lint && npm run build` |
 | i18n parity | `cd frontend/familyhub-web && npm run i18n:check` |
 | Secret scan | `gitleaks git --redact .` (gitleaks 8.30.1 in CI) |
+| Backend unit tests | `cd backend && dotnet test FamilyHub.Api.UnitTests` |
+| API integration tests (Docker required; disposable SQL Server via Testcontainers) | `cd backend && dotnet test FamilyHub.Api.IntegrationTests` |
+| Frontend tests (Vitest) | `cd frontend/familyhub-web && npm test` |
 | Claude Code guard tests | `node --test .claude/hooks/guard.test.mjs` |
 
 Always use the pinned `dotnet tool run dotnet-ef`, never a global `dotnet ef` of another version.
@@ -85,16 +88,18 @@ Classify every task before starting. The highest matching level wins; if unsure,
 6. **Dependencies:** new packages are justified. Run `npm audit` in `frontend/familyhub-web` and `dotnet list package --vulnerable` in `backend/FamilyHub.Api`. Run the latter from the project directory: SDK 8.0.201 fails when given a relative `.sln` path.
 7. **Config and transport:** CORS, HTTPS, forwarded headers and the service worker's caching of `/api` are unchanged, or the change is explicitly justified.
 
-**Testing note:** there is no test project yet, so "testing" means CI plus documented manual verification. When test infrastructure is added, S2/S3 changes must add automated tests.
+**Testing note:** test infrastructure now exists ([docs/TESTING.md](docs/TESTING.md)), so S2/S3 changes must add automated tests for the behavior they change: unit tests for logic and validation, integration tests for endpoints and authorization, Vitest tests for UI behavior. Behavior that tests can't reach (PWA install, push delivery, mobile layout) still needs documented manual verification.
+
+**Integration-test database rule:** integration tests only ever use the disposable Testcontainers SQL Server created by `FamilyHubApiFixture`, checked by `TestDatabaseGuard`. Never point tests at LocalDB, the local FamilyHub database, a shared server, or a CI or production connection string, and never weaken the guard to make a test run.
 
 **Codex note:** Codex is not configured in this repository yet. Until it is, the owner runs the independent Codex review manually and records the outcome in the PR.
 
 ## CI quality gates
 `.github/workflows/ci.yml` runs on every PR to `main` and on pushes to `main`. The `main` ruleset requires all five checks to pass on a branch that is up to date with `main`:
 
-1. **Backend build**: Release build with warnings as errors.
-2. **EF Core migrations**: fails if the model has changes without a migration. Otherwise it applies all migrations to an empty SQL Server 2022 and re-runs the idempotent script.
-3. **Frontend build & lint**: `npm ci`, oxlint, `tsc -b`, Vite build.
+1. **Backend build**: Release build with warnings as errors (including both test projects), then the backend unit tests.
+2. **EF Core migrations**: first runs the API integration tests against a disposable Testcontainers SQL Server. Then it fails if the model has changes without a migration, applies all migrations to an empty SQL Server 2022, and re-runs the idempotent script.
+3. **Frontend build & lint**: `npm ci`, oxlint, Vitest tests, `tsc -b`, Vite build.
 4. **i18n parity (en/mk)**: identical keys and placeholders, no empty values. This job also runs the Claude Code guard tests (`node --test .claude/hooks/guard.test.mjs`).
 5. **Secret scan (gitleaks)**: full git history, with `.gitleaksignore` for rotated findings only.
 

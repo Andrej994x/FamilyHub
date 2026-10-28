@@ -35,9 +35,12 @@ FamilyHub/
 ├── backend/
 │   ├── FamilyHub.sln
 │   ├── global.json             # pins the .NET 8 SDK
-│   └── FamilyHub.Api/          # ASP.NET Core 8 Web API (EF Core migrations in Data/Migrations)
+│   ├── FamilyHub.Api/          # ASP.NET Core 8 Web API (EF Core migrations in Data/Migrations)
+│   ├── FamilyHub.Api.UnitTests/         # xUnit unit tests
+│   └── FamilyHub.Api.IntegrationTests/  # API tests on a disposable SQL Server (Testcontainers)
 ├── docs/
-│   └── ARCHITECTURE.md         # system architecture
+│   ├── ARCHITECTURE.md         # system architecture
+│   └── TESTING.md              # test suites, database isolation, gaps
 ├── .claude/                    # Claude Code guardrails (permissions + PreToolUse guard)
 ├── .github/                    # CI workflow and PR template
 ├── AGENTS.md                   # engineering conventions (shared by people and AI agents)
@@ -49,7 +52,8 @@ FamilyHub/
 ## Prerequisites
 - [Node.js](https://nodejs.org/) 22 LTS (Vite 8 needs 20.19+ or 22.12+) and npm
 - [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
-- SQL Server (LocalDB, Express, or full) — required once data access is wired up
+- SQL Server (LocalDB, Express, or full) for running the API locally
+- [Docker](https://www.docker.com/products/docker-desktop/) (Linux containers) for the API integration tests only
 
 ## Getting Started
 
@@ -104,16 +108,26 @@ npm run dev         # start the Vite dev server
 npm run build       # type-check and produce a production build
 npm run lint        # oxlint
 npm run i18n:check  # en/mk translation key + placeholder parity
+npm test            # Vitest unit/component tests
 ```
+
+### Tests
+```bash
+cd backend
+dotnet test FamilyHub.Api.UnitTests          # no Docker needed
+dotnet test FamilyHub.Api.IntegrationTests   # needs Docker; starts a throwaway SQL Server container
+```
+The integration tests never use your local database. See [docs/TESTING.md](docs/TESTING.md) for what is covered,
+how isolation is guaranteed, and the known gaps.
 
 ## Continuous integration
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to `main` and on pushes to `main`:
 
 | Job | What it checks |
 |---|---|
-| Backend build | `dotnet build` in Release with compiler warnings as errors |
-| EF Core migrations | No model changes without a migration; all migrations apply to an empty SQL Server 2022; the idempotent script re-applies cleanly |
-| Frontend build & lint | `npm ci`, oxlint, TypeScript type-check and Vite build |
+| Backend build | `dotnet build` in Release with compiler warnings as errors, then the backend unit tests |
+| EF Core migrations | API integration tests on a disposable Testcontainers SQL Server; no model changes without a migration; all migrations apply to an empty SQL Server 2022; the idempotent script re-applies cleanly |
+| Frontend build & lint | `npm ci`, oxlint, Vitest tests, TypeScript type-check and Vite build |
 | i18n parity (en/mk) | Both locales have identical keys and `{{placeholders}}`, with no empty strings |
 | Secret scan (gitleaks) | Full git history; rotated historical findings are listed by fingerprint in `.gitleaksignore` |
 
@@ -150,6 +164,6 @@ secure context, so the PWA installs and the service worker runs without a certif
 ## Status
 The core features are implemented: families and invitations, tasks, calendar, shopping, pickups,
 the Family Vault, notifications with Web Push, and reminders. CI covers build, lint, migrations,
-i18n parity and secret scanning. There are no automated tests yet. See
+i18n parity, secret scanning and the automated test suites ([docs/TESTING.md](docs/TESTING.md)). See
 [docs/ARCHITECTURE.md → Known security risks](docs/ARCHITECTURE.md#12-known-security-risks-separate-s3-review-required)
 and [Known gaps](docs/ARCHITECTURE.md#13-known-gaps-observed-in-the-code).

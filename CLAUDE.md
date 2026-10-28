@@ -10,7 +10,8 @@ The shared conventions, risk levels (S0–S3), required gates and approval rules
 - **S3:** use Plan Mode, and do not implement until the owner explicitly approves the plan.
 - **Security review.** When `AGENTS.md` requires one, run the built-in `/security-review` from the repository root (verified in Claude Code 2.1.311). It reviews the current branch's pending changes. Summarize the findings in the PR. If the command is unavailable, use the manual checklist in `AGENTS.md`.
 - **Database side effects.** Starting the API in Development **applies all migrations and seeds sample data** (`DbSeeder`) into the configured database. Only run it against your local LocalDB/SQL Server.
-- **Report verification honestly.** There are no automated tests. Say exactly what you built, ran and exercised. Never describe CI or manual checks as test coverage.
+- **Report verification honestly.** Say exactly what you built, ran and exercised, with the actual test counts and results. Claim coverage only for behavior a test really exercises ([docs/TESTING.md](docs/TESTING.md) lists the gaps). Never describe CI or manual checks as test coverage.
+- **Integration tests need Docker.** `dotnet test FamilyHub.Api.IntegrationTests` starts a disposable SQL Server container and never touches the local database. If Docker isn't running, report that rather than pointing the tests at another server.
 - **Secret-scan findings.** Never add a fingerprint to `.gitleaksignore` to silence a finding unless the owner confirms that secret has been rotated.
 - **Shell.** The development machine is Windows: both PowerShell and Git Bash are available, and user-secrets live in `%APPDATA%\Microsoft\UserSecrets\`.
 
