@@ -5,7 +5,7 @@ FamilyHub has three automated suites. All three run in CI on every pull request 
 | Suite | Project | Runner | Needs | Count |
 |---|---|---|---|---|
 | Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 124 |
-| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 94 (31 need no Docker) |
+| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 97 (31 need no Docker) |
 | Frontend tests | `frontend/familyhub-web/src/**/*.test.ts(x)` | Vitest + React Testing Library on jsdom | Node 22.13+ | 43 |
 
 Counts are test cases as reported by the runners (each `[Theory]`/`it.each` row counts once).
@@ -93,7 +93,7 @@ frontend/familyhub-web/
   - one family per user (409);
   - accepting an invitation while in another family (409).
 - **Workflow:** register → login → create family → invite → accept → create task (others notified, the creator is not) → complete → filter → delete → 404.
-- **Expenses workflow:** the default categories, add with a decimal amount (`1234.56`), list by month and payer, update, delete → 404. Per-field validation problems, a category in use rejected on delete (409, real FK) and archived instead with history kept, and unique category names (case-insensitive, per family).
+- **Expenses workflow:** the default categories, add with a decimal amount (`1234.56`), list by month and payer, update, delete → 404. Per-field validation problems, a category in use rejected on delete (409, real FK) and archived instead with history kept, and unique category names (case-insensitive, per family). Concurrent archive or delete requests on the last two active categories (15 rounds each of archive/archive, archive/delete and delete/delete) always leave exactly one active category, and the losing request gets 400.
 - **Safety:** see below.
 
 **Frontend tests**
@@ -149,7 +149,7 @@ The integration tests **never** use the local FamilyHub database, LocalDB, a sha
 
 **Independence.** Every test registers brand-new users (`<role>-<guid>@test.familyhub`, random passwords) and creates its own family, then works only with those. No test reads data another test created, and no cleanup between tests is needed. Tests share one container and one host for speed. They run sequentially in one xUnit collection, but don't depend on order.
 
-If Docker is not available, the fixture fails with a "Docker is required" message. The 63 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
+If Docker is not available, the fixture fails with a "Docker is required" message. The 66 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
 
 ### Docker setup
 - **Local (Windows/macOS):** Docker Desktop with Linux containers, started before `dotnet test`. The first run pulls the SQL Server image (about 1.5 GB). A full run then takes about 1–4 minutes, depending on image cache and machine.

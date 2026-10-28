@@ -143,4 +143,60 @@ public class ExpenseWorkflowTests(FamilyHubApiFixture fixture)
         var missing = await family.Owner.Client.GetAsync($"{Categories(family.Id)}/{gifts.Id}");
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
+
+    [Theory]
+    [InlineData("archive", "archive")]
+    [InlineData("archive", "delete")]
+    [InlineData("delete", "delete")]
+    public async Task Concurrent_archive_or_delete_never_leaves_the_family_without_an_active_category(
+        string firstAction, string secondAction)
+    {
+        const int rounds = 15;
+        var family = await fixture.CreateFamilyWithOwnerAsync();
+        var parent = await fixture.AddMemberAsync(family, FamilyRole.Parent);
+
+        for (var round = 0; round < rounds; round++)
+        {
+            // Leave exactly two active (unused) categories, then remove both at the same time.
+            var first = await CreateCategoryAsync(family, $"First {round}");
+            var second = await CreateCategoryAsync(family, $"Second {round}");
+            foreach (var category in await family.Owner.GetExpenseCategoriesAsync(family.Id))
+            {
+                if (category.Id != first.Id && category.Id != second.Id)
+                {
+                    await (await ArchiveAsync(family.Owner, family.Id, category)).EnsureStatusAsync(HttpStatusCode.OK);
+                }
+            }
+
+            var responses = await Task.WhenAll(
+                RemoveAsync(firstAction, family.Owner, family.Id, first),
+                RemoveAsync(secondAction, parent, family.Id, second));
+
+            var active = await family.Owner.GetExpenseCategoriesAsync(family.Id);
+            Assert.True(active.Count == 1,
+                $"Round {round}: {active.Count} active categories after concurrent {firstAction}/{secondAction} " +
+                $"({(int)responses[0].StatusCode}, {(int)responses[1].StatusCode}).");
+            Assert.Single(responses, r => r.IsSuccessStatusCode);
+            var rejected = responses.Single(r => !r.IsSuccessStatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal("The family needs at least one active category.",
+                (await rejected.Content.ReadFromJsonAsync<ErrorResponse>())!.Message);
+        }
+    }
+
+    private async Task<ExpenseCategoryResponse> CreateCategoryAsync(TestFamily family, string name)
+    {
+        var response = await family.Owner.Client.PostAsJsonAsync(Categories(family.Id), new CreateExpenseCategoryRequest(name));
+        await response.EnsureStatusAsync(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<ExpenseCategoryResponse>())!;
+    }
+
+    private static Task<HttpResponseMessage> ArchiveAsync(TestUser user, Guid familyId, ExpenseCategoryResponse category) =>
+        user.Client.PutAsJsonAsync($"{Categories(familyId)}/{category.Id}", new UpdateExpenseCategoryRequest(category.Name, true));
+
+    private static Task<HttpResponseMessage> RemoveAsync(
+        string action, TestUser user, Guid familyId, ExpenseCategoryResponse category) =>
+        action == "delete"
+            ? user.Client.DeleteAsync($"{Categories(familyId)}/{category.Id}")
+            : ArchiveAsync(user, familyId, category);
 }

@@ -4,6 +4,7 @@ using FamilyHub.Api.DTOs.Expenses;
 using FamilyHub.Api.Interfaces;
 using FamilyHub.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace FamilyHub.Api.Services;
 
@@ -105,6 +106,8 @@ public class ExpenseCategoryService : ExpenseServiceBase, IExpenseCategoryServic
             return Result<ExpenseCategoryResponse>.Failure(error!.Value, message!);
         }
 
+        await using var transaction = await LockFamilyCategoriesAsync(familyId);
+
         var category = await FindAsync(familyId, categoryId);
         if (category is null)
         {
@@ -132,7 +135,13 @@ public class ExpenseCategoryService : ExpenseServiceBase, IExpenseCategoryServic
 
         category.IsArchived = request.IsArchived;
 
-        return await SaveAsync(category);
+        var result = await SaveAsync(category);
+        if (result.Succeeded && transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
+
+        return result;
     }
 
     public async Task<Result> DeleteCategoryAsync(string userId, Guid familyId, Guid categoryId)
@@ -142,6 +151,8 @@ public class ExpenseCategoryService : ExpenseServiceBase, IExpenseCategoryServic
         {
             return Result.Failure(error!.Value, message!);
         }
+
+        await using var transaction = await LockFamilyCategoriesAsync(familyId);
 
         var category = await FindAsync(familyId, categoryId);
         if (category is null)
@@ -165,7 +176,35 @@ public class ExpenseCategoryService : ExpenseServiceBase, IExpenseCategoryServic
         Db.ExpenseCategories.Remove(category);
         await Db.SaveChangesAsync();
 
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
+
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Locks the family's category rows until the returned transaction ends, so concurrent
+    /// archive, restore, rename and delete requests for one family run one after another and the
+    /// "at least one active category" check only sees committed state. The no-op update takes
+    /// row locks held until commit or rollback (writers block writers under both READ COMMITTED
+    /// and read-committed snapshot); every caller locks the same rows through the same index, so
+    /// they queue instead of deadlocking. Returns null on non-relational providers (EF InMemory
+    /// in unit tests), which support neither transactions nor ExecuteUpdate.
+    /// </summary>
+    private async Task<IDbContextTransaction?> LockFamilyCategoriesAsync(Guid familyId)
+    {
+        if (!Db.Database.IsRelational())
+        {
+            return null;
+        }
+
+        var transaction = await Db.Database.BeginTransactionAsync();
+        await Db.ExpenseCategories
+            .Where(c => c.FamilyId == familyId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.SortOrder, c => c.SortOrder));
+        return transaction;
     }
 
     private Task<ExpenseCategory?> FindAsync(Guid familyId, Guid categoryId) =>
