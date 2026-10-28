@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFamily } from '../hooks/useFamily';
@@ -9,7 +9,7 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { categoryLabel } from '../utils/expenseCategories';
 import { formatMoney } from '../utils/money';
 import { currentMonth, type YearMonth } from '../utils/month';
-import { canEditExpense } from '../utils/roles';
+import { canEditExpense, canManageFamily } from '../utils/roles';
 import { Card } from '../components/dashboard/Card';
 import { EmptyState } from '../components/dashboard/EmptyState';
 import { BudgetOverview } from '../components/expenses/BudgetOverview';
@@ -172,6 +172,7 @@ export default function Expenses() {
   const monthSummary =
     summary && summary.year === month.year && summary.month === month.month ? summary : null;
   const hasFilters = categoryFilter !== undefined || payerFilter !== undefined;
+  const settingsHref = `/expenses/settings?year=${month.year}&month=${month.month}`;
   const historyTotal = history.reduce((sum, e) => sum + e.amount, 0);
 
   if (!family) {
@@ -185,13 +186,25 @@ export default function Expenses() {
           <h1 className="text-2xl font-semibold text-gray-900">{t('nav.expenses')}</h1>
           <p className="mt-1 text-sm text-gray-500">{t('pages.expenses.subtitle')}</p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          {t('expenses.add')}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to={settingsHref}
+            aria-label={t('expenses.settings.title')}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+            </svg>
+            <span className="hidden sm:inline">{t('expenses.settings.title')}</span>
+          </Link>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            {t('expenses.add')}
+          </button>
+        </div>
       </header>
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -214,7 +227,7 @@ export default function Expenses() {
         ) : (
           monthSummary && (
             <div className="space-y-5">
-              <BudgetOverview summary={monthSummary} />
+              <BudgetOverview summary={monthSummary} setBudgetHref={canManageFamily(role) ? settingsHref : undefined} />
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <CategoryBreakdown categories={monthSummary.categories} sortOrders={sortOrders} />
                 <Card

@@ -1,10 +1,14 @@
 import apiClient from '../api/client';
 import type {
+  ExpenseBudgetResponse,
+  ExpenseCategoryRequest,
   ExpenseCategoryResponse,
   ExpenseFilter,
   ExpenseRequest,
   ExpenseResponse,
   ExpenseSummaryResponse,
+  SetExpenseBudgetsRequest,
+  UpdateExpenseCategoryRequest,
 } from '../types';
 
 export const expenseService = {
@@ -46,6 +50,45 @@ export const expenseService = {
       `/families/${familyId}/expense-categories`,
       { params: { includeArchived } },
     );
+    return data;
+  },
+
+  async createCategory(familyId: string, payload: ExpenseCategoryRequest): Promise<ExpenseCategoryResponse> {
+    const { data } = await apiClient.post<ExpenseCategoryResponse>(
+      `/families/${familyId}/expense-categories`,
+      payload,
+    );
+    return data;
+  },
+
+  async updateCategory(
+    familyId: string,
+    categoryId: string,
+    payload: UpdateExpenseCategoryRequest,
+  ): Promise<ExpenseCategoryResponse> {
+    const { data } = await apiClient.put<ExpenseCategoryResponse>(
+      `/families/${familyId}/expense-categories/${categoryId}`,
+      payload,
+    );
+    return data;
+  },
+
+  /** Only an unused category can be deleted; a used one must be archived (the API returns 409). */
+  async deleteCategory(familyId: string, categoryId: string): Promise<void> {
+    await apiClient.delete(`/families/${familyId}/expense-categories/${categoryId}`);
+  },
+
+  /** The budgets in effect for a month (carried forward from the latest change). */
+  async budgets(familyId: string, year: number, month: number): Promise<ExpenseBudgetResponse> {
+    const { data } = await apiClient.get<ExpenseBudgetResponse>(`/families/${familyId}/expense-budgets`, {
+      params: { year, month },
+    });
+    return data;
+  },
+
+  /** Saves the complete set of budgets from the given month on. */
+  async setBudgets(familyId: string, payload: SetExpenseBudgetsRequest): Promise<ExpenseBudgetResponse> {
+    const { data } = await apiClient.put<ExpenseBudgetResponse>(`/families/${familyId}/expense-budgets`, payload);
     return data;
   },
 };

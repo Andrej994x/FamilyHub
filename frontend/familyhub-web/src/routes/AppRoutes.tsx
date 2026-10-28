@@ -19,6 +19,7 @@ import ReminderSettings from '../pages/ReminderSettings';
 import SystemSettings from '../pages/SystemSettings';
 import FamilyVault from '../pages/FamilyVault';
 import Expenses from '../pages/Expenses';
+import ExpenseSettings from '../pages/ExpenseSettings';
 import AcceptInvitation from '../pages/AcceptInvitation';
 
 export function AppRoutes() {
@@ -51,6 +52,7 @@ export function AppRoutes() {
               <Route path="/vault" element={<FamilyVault />} />
               <Route element={<RequireExpensesAccess />}>
                 <Route path="/expenses" element={<Expenses />} />
+                <Route path="/expenses/settings" element={<ExpenseSettings />} />
               </Route>
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/reminders" element={<ReminderSettings />} />

@@ -4,8 +4,8 @@ import { addMonths, compareMonths, formatMonthYear, type YearMonth } from '../..
 interface MonthSwitcherProps {
   value: YearMonth;
   onChange: (value: YearMonth) => void;
-  /** The latest month that can be selected (expenses can't be in the future). */
-  max: YearMonth;
+  /** The latest month that can be selected; omit for no limit (budgets can be planned ahead). */
+  max?: YearMonth;
 }
 
 const buttonClass =
@@ -13,7 +13,7 @@ const buttonClass =
 
 export function MonthSwitcher({ value, onChange, max }: MonthSwitcherProps) {
   const { t, i18n } = useTranslation();
-  const atMax = compareMonths(value, max) >= 0;
+  const atMax = max !== undefined && compareMonths(value, max) >= 0;
 
   return (
     <div className="flex items-center gap-2">

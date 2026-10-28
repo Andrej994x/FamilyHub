@@ -256,6 +256,42 @@ describe('Expenses page', () => {
     expect(screen.queryByText(en.expenses.empty)).not.toBeInTheDocument();
   });
 
+  it.each([FamilyRole.Owner, FamilyRole.Member])('links role %i to budgets & categories for the selected month', async (role) => {
+    renderPage(role, role === FamilyRole.Owner ? 'owner-1' : 'member-1');
+    await screen.findByRole('region', { name: en.expenses.summary.title });
+
+    await userEvent.click(screen.getByRole('button', { name: en.expenses.month.previous }));
+    const previous = addMonths(thisMonth, -1);
+
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: en.expenses.settings.title })).toHaveAttribute(
+        'href',
+        `/expenses/settings?year=${previous.year}&month=${previous.month}`,
+      ),
+    );
+  });
+
+  it('offers "Set a budget" to owners and parents only when no budget is set', async () => {
+    vi.mocked(expenseService.summary).mockImplementation(async (_familyId, year, month) =>
+      summary({ year, month, budget: null, remaining: null, usagePercent: null }),
+    );
+    renderPage(FamilyRole.Parent, 'owner-1');
+    expect(await screen.findByRole('link', { name: en.expenses.summary.setBudget })).toHaveAttribute(
+      'href',
+      `/expenses/settings?year=${thisMonth.year}&month=${thisMonth.month}`,
+    );
+  });
+
+  it('does not offer "Set a budget" to members', async () => {
+    vi.mocked(expenseService.summary).mockImplementation(async (_familyId, year, month) =>
+      summary({ year, month, budget: null, remaining: null, usagePercent: null }),
+    );
+    renderPage(FamilyRole.Member, 'member-1');
+
+    expect(await screen.findByText(en.expenses.summary.noBudget)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: en.expenses.summary.setBudget })).not.toBeInTheDocument();
+  });
+
   it('opens the add dialog from the dashboard quick action link', async () => {
     renderPage(FamilyRole.Member, 'member-1', '/expenses?add=1');
 

@@ -40,6 +40,10 @@ export type {
   ExpenseFilter,
   CategorySpendingResponse,
   ExpenseSummaryResponse,
+  ExpenseBudgetResponse,
+  SetExpenseBudgetsRequest,
+  ExpenseCategoryRequest,
+  UpdateExpenseCategoryRequest,
 } from './expenses';
 
 export { DocumentType } from './vault';
