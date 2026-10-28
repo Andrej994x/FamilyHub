@@ -176,10 +176,10 @@ jobs:
         working-directory: frontend/familyhub-web
         run: npm run i18n:check
 
-      # The Claude Code guard (.claude/hooks) is also dependency-free Node, so its tests run in this
-      # required job: a guard change with failing tests cannot be merged.
+      # The Claude Code guard, agent policy and .claude/ configuration invariants are dependency-free
+      # Node, so their tests run in this required job: a weakening change with failing tests cannot merge.
       - name: Claude Code guard tests
-        run: node --test .claude/hooks/guard.test.mjs
+        run: node --test .claude/hooks/guard.test.mjs .claude/hooks/agent-policy.test.mjs .claude/hooks/config.test.mjs
 
   gitleaks:
     name: Secret scan (gitleaks)

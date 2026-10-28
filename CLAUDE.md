@@ -8,7 +8,7 @@ The shared conventions, risk levels (S0–S3), required gates and approval rules
 - **Classify first.** State the S0–S3 level at the start of a task.
 - **S2:** present a concise plan, then continue in Auto Mode for that scope without asking before each safe step. Re-plan if the scope grows.
 - **S3:** use Plan Mode, and do not implement until the owner explicitly approves the plan.
-- **Security review.** When `AGENTS.md` requires one, run the built-in `/security-review` from the repository root (verified in Claude Code 2.1.311). It reviews the current branch's pending changes. Summarize the findings in the PR. If the command is unavailable, use the manual checklist in `AGENTS.md`.
+- **Security review.** When `AGENTS.md` requires one, delegate to the **`security-reviewer`** subagent, which applies the AGENTS.md checklist to the FamilyHub authorization model, and summarize its findings in the PR. The built-in `/security-review` (run from the repository root) is an optional second pass.
 - **Database side effects.** Starting the API in Development **applies all migrations and seeds sample data** (`DbSeeder`) into the configured database. Only run it against your local LocalDB/SQL Server.
 - **Report verification honestly.** Say exactly what you built, ran and exercised, with the actual test counts and results. Claim coverage only for behavior a test really exercises ([docs/TESTING.md](docs/TESTING.md) lists the gaps). Never describe CI or manual checks as test coverage.
 - **Integration tests need Docker.** `dotnet test FamilyHub.Api.IntegrationTests` starts a disposable SQL Server container and never touches the local database. If Docker isn't running, report that rather than pointing the tests at another server.
@@ -22,5 +22,15 @@ The shared conventions, risk levels (S0–S3), required gates and approval rules
 
 A block includes a `FamilyHub guard:` reason. Follow its suggested alternative or ask the owner. Never work around a block with a different spelling of the same command. These are guardrails, not a sandbox. See [.claude/README.md](.claude/README.md) for every rule, its trade-offs and its limitations.
 
-## Not configured yet
-This repository has no project-specific Claude Code skills, subagents or MCP servers, and Codex is not set up. Don't assume any of these exist.
+## Skills & subagents
+- **Skills** (in `.claude/skills/`, run inline):
+  - `fullstack-feature` for features spanning API and UI;
+  - `ef-migration` for model or migration changes;
+  - `testing` when writing or running tests;
+  - `/codex-review` (owner-invoked, **optional**): a neutral risk brief for complex S2/S3 changes. Routine PRs use `codex review --base origin/main` directly. Codex is an independent reviewer and never replaces automated tests.
+- **Delegate sparingly:** each subagent costs its own tokens.
+  - **`security-reviewer`** (read-only): for S3, and for S2 touching endpoints, input handling or dependencies.
+  - **`test-writer`**: coverage-gap analysis for S2/S3 features (no extra approval). Test writing only with the approved plan passed as a `FEATURE SCOPE:` block; anything beyond it goes back to the owner.
+  - Don't delegate searches, S0/S1 work or small tasks; do them directly.
+- Both agents are restricted by `.claude/hooks/agent-policy.mjs`: deny-by-default command allowlists, test-folder-only edits for test-writer, and fail-closed hooks. A block reads `FamilyHub guard: <agent>: …` or `FamilyHub agent policy: …`. See [.claude/README.md](.claude/README.md).
+- **Not configured:** project MCP servers, and Codex automation (Claude never runs Codex).

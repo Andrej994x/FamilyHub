@@ -11,6 +11,11 @@ Verified against **Claude Code 2.1.311** (VS Code extension, Windows) and the of
 | `settings.json` | Shared (committed) permission rules and hook registration |
 | `hooks/guard.mjs` | The PreToolUse guard (Node.js built-ins only) |
 | `hooks/guard.test.mjs` | Fixture tests: `node --test .claude/hooks/guard.test.mjs` |
+| `hooks/agent-policy.mjs` | Fail-closed tool policy for the restricted subagents (used by `guard.mjs` and by each agent's own hook) |
+| `hooks/agent-policy.test.mjs` | Policy tests, including adversarial chaining, wrapper and path cases |
+| `hooks/config.test.mjs` | Least-privilege invariants for skills, agents and settings |
+| `skills/<name>/SKILL.md` | Project skills: `fullstack-feature`, `ef-migration`, `testing`, `codex-review` |
+| `agents/<name>.md` | Project subagents: `security-reviewer`, `test-writer` |
 | `settings.local.json` | Your personal overrides (gitignored, optional) |
 
 **Requirements:**
@@ -108,8 +113,68 @@ In Development, API startup **applies EF Core migrations and seeds sample data**
 - The guard applies only to Claude Code sessions started in this repository. It doesn't apply to Codex, other tools, or commands you run yourself.
 - In `bypassPermissions` mode, prompts are skipped, so `ask` protections don't apply. The `deny` behaviour was verified only in the default mode (headless `claude -p`), not in bypass mode. Avoid bypass mode in this repository.
 
+## Skills and subagents (Phase 5)
+
+### Skills (`skills/`)
+Skills run **inline** in the main session; none forks a subagent context. **No skill sets `allowed-tools`**, which in Claude Code *grants* pre-approval, so every tool call still goes through normal permissions and the guard. None uses `!` shell injection, which would bypass permission prompts. `config.test.mjs` enforces all of this.
+
+| Skill | Invocation | Purpose |
+|---|---|---|
+| `fullstack-feature` | Claude or `/fullstack-feature` | Feature workflow: risk level, backend layering and family authorization, frontend types/services/i18n, then tests, security review, verification and hand-off |
+| `ef-migration` | Claude or `/ef-migration` | Pinned `dotnet-ef`, an `Up`/`Down` review checklist, data loss = S3, never touch the local database |
+| `testing` | Claude or `/testing` | Choosing the suite, FamilyHub test conventions, the integration-database rule, regression tests, honest reporting |
+| `codex-review` | **`/codex-review` only** (`disable-model-invocation`) | **Optional**, for complex S2/S3 changes. Writes a neutral, facts-only brief to the gitignored `.codex-review/` and prints the owner's commands. It never runs Codex. It can't edit or delegate (`disallowed-tools: Edit NotebookEdit Agent`). Routine PRs use `codex review --base origin/main` directly |
+
+`paths` scoping is deliberately **not** used. In Claude Code 2.1.312, a `paths`-scoped skill is neither listed nor invocable by name (`/testing`) until a matching file is in play. That breaks `fullstack-feature`'s hand-offs, and the saving (about 300 characters of description) isn't worth it.
+
+### Subagents (`agents/`)
+Delegation is explicit. Neither description says "use proactively", and neither agent has the `Agent` tool, so they can't nest. Neither sets `permissionMode` (ignored under Auto Mode anyway), `mcpServers` or `memory`.
+
+| Agent | Tools | Model | When it's used |
+|---|---|---|---|
+| `security-reviewer` | `Read, Grep, Glob, Bash` (no write tools) | `inherit`, effort high, max 25 turns | Required for S3, and for S2 changes touching endpoints, input handling or dependencies. Also on owner request. Reviews `origin/main...HEAD` against the FamilyHub authorization model and the AGENTS.md checklist, and reports findings only |
+| `test-writer` | `Read, Grep, Glob, Edit, Write, Bash` | `sonnet`, max 40 turns | S2/S3 features: gap **analysis** without extra approval. **Writes** tests only within the approved feature scope (a `FEATURE SCOPE:` block); anything beyond it comes back as a proposal for the owner. Not for S0/S1 |
+
+### Enforced policy (`hooks/agent-policy.mjs`): defense-in-depth, deny by default
+Two layers run the same code:
+1. **Settings guard** (`guard.mjs`), keyed on the hook input's `agent_type`. It runs everywhere, including headless `-p` sessions and untrusted folders.
+2. **Each agent's frontmatter hook** (`node agent-policy.mjs <agent>`) with **`onFailure: block`**. If the policy can't run, the agent's tool call is blocked. Frontmatter hooks run only after workspace trust is accepted, never in `-p`.
+
+**What the policy allows:**
+
+| | `security-reviewer` | `test-writer` |
+|---|---|---|
+| Write/Edit/MultiEdit/NotebookEdit | **always denied** | Allowed in `backend/FamilyHub.Api.UnitTests/**`, `backend/FamilyHub.Api.IntegrationTests/**`, `frontend/familyhub-web/src/**/*.test.ts(x)` and `src/test/**`. **Ask:** test `*.csproj`, `package.json`/lock, `vitest.config.ts`, `src/test/setup.ts`. **Denied:** the isolation guards (`TestDatabaseGuard`, `DockerEndpointGuard`, `FamilyHubApiFixture`, `FamilyHubApiFactory`, `Safety/`), `bin/`/`obj/`, and everything else, including all production code |
+| Shell allowlist | Read-only git (`status`, `diff`, `log`, `show`, `blame`, `ls-files`, `merge-base`, `rev-parse`, `grep`, branch listing), `rg`/`grep`/`cat`-style filters, `find` without actions, `gitleaks … --redact` without reports, `npm audit` (no `fix`), `dotnet list package --vulnerable`, read-only EF migration listing, read-only `gh` (`pr view`/`diff`/`checks`, `run view`/`list`, GET `api`), `node --test .claude/hooks/*.test.mjs`, `cd` | The same **plus** `dotnet build`/`test`/`restore`, `npm test`, `npm run test`/`lint`/`build`/`i18n:check`, `npx vitest run` |
+
+**Options are allowlisted per command, not just program names.** Several "read-only" programs have options that write files or run programs. The PR #6 Codex review found `sort -o`; the follow-up audit found `uniq in out`, `sort -T`/`--compress-program`, `gitleaks --log-opts`/`--diagnostics-dir`, `npm --prefix`/`--logs-dir`/`--cache`, and EF `--msbuildprojectextensionspath`. For test-writer it also found:
+- `dotnet build -o`, `--results-directory`, `--diag`, file loggers, `-bl`/`/bl`, `--use-lock-file` and `-p:`/`-t:`;
+- `vitest -u`/`--coverage`/`--outputFile`/`--config`.
+
+So every program with options validates them against its own allowlist, and an **unknown option is denied**. `uniq` takes at most one file argument, and a `dotnet` argument starting with `/` is treated as an MSBuild switch, not a path.
+
+Only programs audited to have *no* write or exec options accept any options: coreutils `cat`, `head`, `tail`, `wc`, `ls`, `cut`, `basename`, `dirname`, `pwd`, `true`, plus `diff`, `grep`, `echo`/`printf`, and the read-only PowerShell cmdlets. For the remaining denylist-style cases, the denied options are the complete documented set: git's `--output`/`-O`/`--ext-diff`/`--textconv`, find's `-exec`/`-ok`/`-delete`/`-fprint*`/`-fls`, and rg's `--pre`/`--hostname-bin`.
+
+**Always denied for both:**
+- **chaining:** any part of `&&`, `||`, `;`, `|`, `&` or a newline that isn't allowlisted;
+- **indirection:** wrappers (`bash -c`, `pwsh -Command`, `cmd /c`, `eval`, `iex`, `Start-Process`, `env`, `xargs`, `sudo`, `timeout`, `nohup`), `$` variables, `$(…)`, backticks, `<(…)`, heredocs and here-strings, `VAR=value` prefixes, programs given by path;
+- **output and secrets:** redirects other than `2>&1` or to `/dev/null`, `NUL` or `$null`; references to the user-secrets store or `.env` files;
+- **malformed input:** unbalanced quotes, empty commands.
+
+**Paths** are resolved against `CLAUDE_PROJECT_DIR` and checked case-insensitively, through the **real path** of the nearest existing folder, so junctions and symlinks can't escape. These are denied: `..` escapes, UNC/`\\?\` paths, alternate data streams (`::$DATA`), trailing dots or spaces, 8.3 short names, NUL, and an unknown repository root.
+
+**Fail-closed:** a policy exception gives deny. Unparseable hook input that names a restricted agent is blocked (`guard.mjs` exits 2; `agent-policy.mjs` emits deny). An unknown agent name in a frontmatter registration exits 2.
+
+### Limitations
+- **Defense-in-depth, not a sandbox.** The hard boundaries are the agents' `tools` lists (security-reviewer has no write tools), the permission deny rules, CI, branch protection and owner approval.
+- **test-writer can run code it wrote.** It runs the tests, and test code can do anything the test process can. Review its diffs like any other change; CI re-runs everything.
+- **The feature scope isn't machine-checked.** The test-writer's `FEATURE SCOPE:` limit is enforced by its instructions. The policy enforces the *test folders*, not the individual feature.
+- **Headless sessions have one layer.** In `-p` and untrusted folders only the settings layer applies, and its main-session failure mode stays fail-open (Phase 3). For restricted agents, errors inside the policy still fail closed.
+- `Read`/`Grep`/`Glob` aren't restricted by the policy. The secret-store `Read` deny rules apply as before.
+
 ## Verifying and changing the guard
 - **Tests:** `node --test .claude/hooks/guard.test.mjs`. This runs pure fixture checks plus stdin/stdout contract tests. No command under test is executed.
-- **CI:** the same command runs as the "Claude Code guard tests" step inside the required **`i18n parity (en/mk)`** job (`.github/workflows/ci.yml`). Failing guard tests therefore fail a required check and block the merge. The job keeps its name because the `main` ruleset refers to it.
+- **All `.claude` tests:** `node --test .claude/hooks/guard.test.mjs .claude/hooks/agent-policy.test.mjs .claude/hooks/config.test.mjs`.
+- **CI:** these run as the "Claude Code guard tests" step inside the required **`i18n parity (en/mk)`** job (`.github/workflows/ci.yml`). Failing guard tests therefore fail a required check and block the merge. The job keeps its name because the `main` ruleset refers to it.
 - **Changing a rule:** update `guard.mjs` and add a test case in the same PR. Changes to `.claude/` are **S2** (shared infrastructure) and must not weaken an approval rule from `AGENTS.md`.
 - **Personal overrides** go in `.claude/settings.local.json`, which is gitignored. Deny and ask rules from `settings.json` still apply.
