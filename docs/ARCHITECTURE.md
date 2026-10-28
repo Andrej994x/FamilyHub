@@ -78,7 +78,7 @@ All routes are under `/api`. Every controller has a class-level `[Authorize]` ex
 | Invitations | `families/{familyId}/invitations` (create, list, resend, cancel), `invitations/{token}/accept` |
 | Family features | `families/{familyId}/` `tasks`, `events`, `children`, `pickups`, `documents`, `shopping-lists`. Shopping items: `shopping-lists/{listId}/items` |
 | Family Vault | `families/{familyId}/vault/` `vehicles`, `pets`, `home`, `warranties`, `other`, `attachments` |
-| Family Expenses | `families/{familyId}/expenses` (list needs `year` + `month`; optional `categoryId`, `paidByUserId`), `families/{familyId}/expense-categories` (`includeArchived`) |
+| Family Expenses | `families/{familyId}/expenses` (list needs `year` + `month`; optional `categoryId`, `paidByUserId`), `expenses/summary?year&month`, `families/{familyId}/expense-categories` (`includeArchived`), `families/{familyId}/expense-budgets` (GET `?year&month`, PUT) |
 | Per user | `notifications`, `push`, `reminder-preferences` |
 | Dev only | `POST reminders/run` (404 outside Development) |
 | Health | `GET health` |
@@ -91,7 +91,7 @@ Swagger (Development only) is the authoritative per-action reference.
   - Family core: `Family`, `FamilyMember`, `FamilyInvitation`, `ChildProfile`;
   - features: `FamilyTask`, `FamilyEvent`, `ShoppingList`/`ShoppingItem`, `PickupSchedule`, `FamilyDocument`;
   - vault records: `Vehicle`, `Pet`, `HomeRecord`, `Warranty`, `OtherRecord`, plus polymorphic `VaultAttachment`;
-  - expenses: `Expense`, `ExpenseCategory`, `ExpenseBudget` (the budget table exists; its API is not implemented yet);
+  - expenses: `Expense`, `ExpenseCategory`, `ExpenseBudget`. A budget row applies from its `EffectiveFrom` month until a later row for the same family and category (null = the overall budget) replaces it; a null `Amount` removes the budget from that month on;
   - notifications and reminders: `Notification`, `PushSubscription`, `ReminderHistory`, `UserReminderPreference`.
 - **Storage conventions:**
   - Enum columns are stored as strings (`HasConversion<string>()`, 13 occurrences), while JSON serializes enums as integers.
@@ -152,6 +152,8 @@ Roles (`Models/Enums/FamilyRole.cs`): `Owner`, `Parent`, `Member`, `Child`. A us
 | View and add expenses; view categories | Owner, Parent, Member (**a Child gets 403, even on reads**) |
 | Edit or delete an expense | Owner, Parent: any expense. Member: only expenses they created |
 | Create, rename, archive, restore or delete expense categories | Owner, Parent |
+| View budgets and the monthly summary | Owner, Parent, Member (a Child gets 403) |
+| Set or remove budgets | Owner, Parent |
 | Notifications, push subscriptions, reminder preferences | The user's own records only |
 
 **Invitations** (`Services/InvitationService.cs`):

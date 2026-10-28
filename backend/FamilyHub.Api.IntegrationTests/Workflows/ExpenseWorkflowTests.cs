@@ -184,6 +184,67 @@ public class ExpenseWorkflowTests(FamilyHubApiFixture fixture)
         }
     }
 
+    [Theory]
+    [InlineData("create")]
+    [InlineData("update")]
+    public async Task Saving_an_expense_while_its_category_is_deleted_never_fails_with_a_server_error(string action)
+    {
+        const int rounds = 15;
+        var family = await fixture.CreateFamilyWithOwnerAsync();
+        var parent = await fixture.AddMemberAsync(family, FamilyRole.Parent);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var existing = await family.Owner.CreateExpenseAsync(family.Id, 100m, today);
+
+        for (var round = 0; round < rounds; round++)
+        {
+            var category = await CreateCategoryAsync(family, $"Racing {action} {round}");
+
+            var save = action == "create"
+                ? parent.Client.PostAsJsonAsync(Expenses(family.Id),
+                    new CreateExpenseRequest(250m, category.Id, today, parent.UserId, null))
+                : parent.Client.PutAsJsonAsync($"{Expenses(family.Id)}/{existing.Id}",
+                    new UpdateExpenseRequest(100m, category.Id, today, family.Owner.UserId, null));
+            var responses = await Task.WhenAll(save, family.Owner.Client.DeleteAsync($"{Categories(family.Id)}/{category.Id}"));
+            var (saved, deleted) = (responses[0], responses[1]);
+
+            var outcome = $"Round {round}: {action} {(int)saved.StatusCode}, delete {(int)deleted.StatusCode}.";
+            Assert.True((int)saved.StatusCode < 500 && (int)deleted.StatusCode < 500, outcome);
+            // Either the expense was saved first (the category is in use, so the delete is refused),
+            // or the category was deleted first (the expense is rejected). Nothing else.
+            Assert.True(saved.IsSuccessStatusCode
+                ? deleted.StatusCode == HttpStatusCode.Conflict
+                : saved.StatusCode == HttpStatusCode.BadRequest && deleted.StatusCode == HttpStatusCode.NoContent, outcome);
+
+            if (action == "update" && saved.IsSuccessStatusCode)
+            {
+                // Move the expense back so the next round's category is unused again.
+                var restore = await family.Owner.Client.PutAsJsonAsync($"{Expenses(family.Id)}/{existing.Id}",
+                    new UpdateExpenseRequest(100m, existing.CategoryId, today, family.Owner.UserId, null));
+                await restore.EnsureStatusAsync(HttpStatusCode.OK);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Many_expenses_added_at_the_same_time_are_all_saved()
+    {
+        const int count = 12;
+        var family = await fixture.CreateFamilyWithOwnerAsync();
+        var member = await fixture.AddMemberAsync(family, FamilyRole.Member);
+        var food = (await family.Owner.GetExpenseCategoriesAsync(family.Id))[0];
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Saves for one family queue on the category lock; they must all succeed, not deadlock.
+        var responses = await Task.WhenAll(Enumerable.Range(1, count).Select(i =>
+            (i % 2 == 0 ? family.Owner : member).Client.PostAsJsonAsync(Expenses(family.Id),
+                new CreateExpenseRequest(i, food.Id, today, family.Owner.UserId, null))));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+        var month = await family.Owner.Client.GetFromJsonAsync<List<ExpenseResponse>>(
+            $"{Expenses(family.Id)}?year={today.Year}&month={today.Month}");
+        Assert.Equal((count, count * (count + 1) / 2m), (month!.Count, month.Sum(e => e.Amount)));
+    }
+
     private async Task<ExpenseCategoryResponse> CreateCategoryAsync(TestFamily family, string name)
     {
         var response = await family.Owner.Client.PostAsJsonAsync(Categories(family.Id), new CreateExpenseCategoryRequest(name));

@@ -14,6 +14,7 @@ namespace FamilyHub.Api.Services;
 public class ExpenseService : ExpenseServiceBase, IExpenseService
 {
     private const string NotFoundMessage = "Expense not found in this family.";
+    private const int RecentExpenseCount = 5;
 
     public ExpenseService(AppDbContext db, ILogger<ExpenseService> logger)
         : base(db, logger)
@@ -27,6 +28,9 @@ public class ExpenseService : ExpenseServiceBase, IExpenseService
         {
             return Result<ExpenseResponse>.Failure(error!.Value, message!);
         }
+
+        // Serializes with category delete/archive so the category check below still holds at save time.
+        await using var transaction = await LockFamilyCategoriesAsync(familyId);
 
         var category = await Db.ExpenseCategories
             .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.FamilyId == familyId);
@@ -52,6 +56,10 @@ public class ExpenseService : ExpenseServiceBase, IExpenseService
 
         Db.Expenses.Add(expense);
         await Db.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         return Result<ExpenseResponse>.Success(await ToResponseAsync(expense, category));
     }
@@ -119,6 +127,9 @@ public class ExpenseService : ExpenseServiceBase, IExpenseService
             return Result<ExpenseResponse>.Failure(error!.Value, message!);
         }
 
+        // Serializes with category delete/archive so the category check below still holds at save time.
+        await using var transaction = await LockFamilyCategoriesAsync(familyId);
+
         var expense = await FindAsync(familyId, expenseId);
         if (expense is null)
         {
@@ -149,6 +160,10 @@ public class ExpenseService : ExpenseServiceBase, IExpenseService
         expense.UpdatedAt = DateTimeOffset.UtcNow;
 
         await Db.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         return Result<ExpenseResponse>.Success(await ToResponseAsync(expense, category));
     }
@@ -177,6 +192,76 @@ public class ExpenseService : ExpenseServiceBase, IExpenseService
 
         return Result.Success();
     }
+
+    public async Task<Result<ExpenseSummaryResponse>> GetSummaryAsync(string userId, Guid familyId, int year, int month)
+    {
+        var (membership, error, message) = await AuthorizeAsync(userId, familyId, requireManage: false);
+        if (membership is null)
+        {
+            return Result<ExpenseSummaryResponse>.Failure(error!.Value, message!);
+        }
+
+        var monthStart = new DateOnly(year, month, 1);
+        var nextMonthStart = monthStart.AddMonths(1);
+        var monthExpenses = Db.Expenses
+            .Where(e => e.FamilyId == familyId && e.Date >= monthStart && e.Date < nextMonthStart);
+
+        // Totals are summed in SQL; only one row per category comes back.
+        var spending = await monthExpenses
+            .GroupBy(e => e.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Spent = g.Sum(e => e.Amount), Count = g.Count() })
+            .ToListAsync();
+
+        var recent = await monthExpenses
+            .Include(e => e.Category)
+            .OrderByDescending(e => e.Date)
+            .ThenByDescending(e => e.CreatedAt)
+            .Take(RecentExpenseCount)
+            .ToListAsync();
+
+        var budgets = await GetEffectiveBudgetsAsync(familyId, monthStart);
+        var budgetedCategoryIds = budgets.Categories
+            .Where(c => c.Value.Amount is not null)
+            .Select(c => c.Key);
+        var categoryIds = spending.Select(s => s.CategoryId).Union(budgetedCategoryIds).ToList();
+        var categories = await Db.ExpenseCategories
+            .Where(c => c.FamilyId == familyId && categoryIds.Contains(c.Id))
+            .ToListAsync();
+
+        var byCategory = categories
+            .Select(c =>
+            {
+                var spent = spending.FirstOrDefault(s => s.CategoryId == c.Id);
+                var amount = spent?.Spent ?? 0m;
+                var budget = budgets.AmountFor(c.Id);
+                return (Category: c, Row: new CategorySpendingResponse(c.Id, c.Name, c.DefaultCategory, c.IsArchived,
+                    amount, spent?.Count ?? 0, budget, budget - amount, UsagePercent(amount, budget)));
+            })
+            .OrderByDescending(x => x.Row.Spent)
+            .ThenBy(x => x.Category.SortOrder)
+            .ThenBy(x => x.Category.Name)
+            .Select(x => x.Row)
+            .ToList();
+
+        var total = spending.Sum(s => s.Spent);
+        var overallBudget = budgets.OverallAmount;
+        var names = await GetUserNamesAsync(recent.SelectMany(e => new[] { e.PaidByUserId, e.CreatedByUserId }));
+
+        return Result<ExpenseSummaryResponse>.Success(new ExpenseSummaryResponse(
+            year, month, total, spending.Sum(s => s.Count),
+            overallBudget, overallBudget - total, UsagePercent(total, overallBudget),
+            byCategory,
+            recent.Select(e => ToResponse(e, e.Category!, names)).ToList()));
+    }
+
+    /// <summary>
+    /// Share of the budget spent, as a whole percentage (above 100 when over budget). Capped at
+    /// int.MaxValue: a tiny budget with large spending would otherwise overflow the cast.
+    /// </summary>
+    private static int? UsagePercent(decimal spent, decimal? budget) =>
+        budget is > 0
+            ? (int)Math.Min(Math.Round(spent * 100m / budget.Value, MidpointRounding.AwayFromZero), int.MaxValue)
+            : null;
 
     private static bool CanChange(FamilyMember membership, Expense expense) =>
         CanManage(membership) || expense.CreatedByUserId == membership.UserId;

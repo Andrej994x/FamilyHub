@@ -14,4 +14,6 @@ public interface IExpenseService
     Task<Result<ExpenseResponse>> UpdateExpenseAsync(string userId, Guid familyId, Guid expenseId, UpdateExpenseRequest request);
 
     Task<Result> DeleteExpenseAsync(string userId, Guid familyId, Guid expenseId);
+
+    Task<Result<ExpenseSummaryResponse>> GetSummaryAsync(string userId, Guid familyId, int year, int month);
 }

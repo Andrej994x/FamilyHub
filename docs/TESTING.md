@@ -4,8 +4,8 @@ FamilyHub has three automated suites. All three run in CI on every pull request 
 
 | Suite | Project | Runner | Needs | Count |
 |---|---|---|---|---|
-| Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 124 |
-| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 97 (31 need no Docker) |
+| Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 155 |
+| API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 127 (31 need no Docker) |
 | Frontend tests | `frontend/familyhub-web/src/**/*.test.ts(x)` | Vitest + React Testing Library on jsdom | Node 22.13+ | 43 |
 
 Counts are test cases as reported by the runners (each `[Theory]`/`it.each` row counts once).
@@ -68,7 +68,9 @@ frontend/familyhub-web/
   - archived categories kept on existing expenses but not newly chosen, and a former member kept as payer;
   - history month bounds, ordering and filters;
   - default categories seeded once per family, case-insensitive unique names, renamed defaults become custom;
-  - delete only when unused (also removes the category's budget rows), and the last active category is protected.
+  - delete only when unused (also removes the category's budget rows), and the last active category is protected;
+  - budgets: request validation, carry-forward until changed (earlier months keep theirs), removal from a month on, same-month updates in place, an omitted category losing its budget, archived and foreign categories rejected, Members view only;
+  - monthly summary: totals, remaining and usage percentage overall and per category (including over budget and budget-only categories), the five most recent expenses, month bounds and family isolation; the usage percentage is capped instead of overflowing for a tiny budget with huge spending.
 
 **API integration tests** (the real pipeline: routing, JWT bearer auth, validators, services, EF Core on SQL Server)
 - **401:** no token on protected endpoints, a token signed with another key, an expired token, a wrong password.
@@ -84,7 +86,7 @@ frontend/familyhub-web/
   - every role can work with tasks;
   - the Owner cannot be removed and a Parent cannot remove members;
   - removing a member unassigns their tasks and revokes access. This exercises `ExecuteUpdate`/`ExecuteDelete` on real SQL Server;
-  - expenses: Owner, Parent and Member can add and a Child gets 403 (including on reads); a Member can change only their own expenses; only Owner and Parent manage categories; removing a member keeps their expenses and payer name.
+  - expenses: Owner, Parent and Member can add and a Child gets 403 (including on reads, the summary and budgets); only Owner and Parent set budgets, Members view them, and another family's budgets can't be changed, and a budget can't use another family's category; a Member can change only their own expenses; only Owner and Parent manage categories; removing a member keeps their expenses and payer name.
 - **Validation:**
   - ValidationProblem fields for register, task title and invitation role;
   - a task assigned to another family's member;
@@ -93,7 +95,8 @@ frontend/familyhub-web/
   - one family per user (409);
   - accepting an invitation while in another family (409).
 - **Workflow:** register → login → create family → invite → accept → create task (others notified, the creator is not) → complete → filter → delete → 404.
-- **Expenses workflow:** the default categories, add with a decimal amount (`1234.56`), list by month and payer, update, delete → 404. Per-field validation problems, a category in use rejected on delete (409, real FK) and archived instead with history kept, and unique category names (case-insensitive, per family). Concurrent archive or delete requests on the last two active categories (15 rounds each of archive/archive, archive/delete and delete/delete) always leave exactly one active category, and the losing request gets 400.
+- **Expenses workflow:** the default categories, add with a decimal amount (`1234.56`), list by month and payer, update, delete → 404. Per-field validation problems, a category in use rejected on delete (409, real FK) and archived instead with history kept, and unique category names (case-insensitive, per family). Concurrent archive or delete requests on the last two active categories (15 rounds each of archive/archive, archive/delete and delete/delete) always leave exactly one active category, and the losing request gets 400. Creating or updating an expense while its category is being deleted never returns a 500: either the expense is saved and the delete gets 409, or the category is deleted and the expense gets 400. Twelve expenses added at once by one family are all saved.
+- **Budgets workflow:** budgets set for October carry into November, a December change leaves October unchanged, and the summary totals (summed in SQL) match each month. Also: per-field validation, no new budget for an archived category, and concurrency: two complete budget sets saved at once (for a new month, and for an existing month where they change different rows) always leave one request's whole set, never a mix, and a budget change racing a category delete never returns a 500. The summary's family isolation is checked on SQL Server, a 0.01 MKD budget with a 10,000,000 MKD expense still returns 200 (percentage capped), and out-of-range months, an empty category id and more than 100 category budgets are rejected at the API.
 - **Safety:** see below.
 
 **Frontend tests**
@@ -149,7 +152,7 @@ The integration tests **never** use the local FamilyHub database, LocalDB, a sha
 
 **Independence.** Every test registers brand-new users (`<role>-<guid>@test.familyhub`, random passwords) and creates its own family, then works only with those. No test reads data another test created, and no cleanup between tests is needed. Tests share one container and one host for speed. They run sequentially in one xUnit collection, but don't depend on order.
 
-If Docker is not available, the fixture fails with a "Docker is required" message. The 66 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
+If Docker is not available, the fixture fails with a "Docker is required" message. The 96 container tests then fail; **they never fall back to another server**. The 31 guard checks still run.
 
 ### Docker setup
 - **Local (Windows/macOS):** Docker Desktop with Linux containers, started before `dotnet test`. The first run pulls the SQL Server image (about 1.5 GB). A full run then takes about 1–4 minutes, depending on image cache and machine.

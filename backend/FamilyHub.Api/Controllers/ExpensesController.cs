@@ -15,17 +15,20 @@ public class ExpensesController : ApiControllerBase
     private readonly IValidator<CreateExpenseRequest> _createValidator;
     private readonly IValidator<UpdateExpenseRequest> _updateValidator;
     private readonly IValidator<ExpenseFilter> _filterValidator;
+    private readonly IValidator<ExpenseMonthQuery> _monthValidator;
 
     public ExpensesController(
         IExpenseService service,
         IValidator<CreateExpenseRequest> createValidator,
         IValidator<UpdateExpenseRequest> updateValidator,
-        IValidator<ExpenseFilter> filterValidator)
+        IValidator<ExpenseFilter> filterValidator,
+        IValidator<ExpenseMonthQuery> monthValidator)
     {
         _service = service;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _filterValidator = filterValidator;
+        _monthValidator = monthValidator;
     }
 
     [HttpPost]
@@ -55,6 +58,19 @@ public class ExpensesController : ApiControllerBase
         if (!validation.IsValid) return ToValidationProblem(validation);
 
         return HandleResult(await _service.GetExpensesAsync(CurrentUserId, familyId, filter));
+    }
+
+    [HttpGet("summary")]
+    [ProducesResponseType(typeof(ExpenseSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSummary(Guid familyId, [FromQuery] ExpenseMonthQuery query)
+    {
+        var validation = await _monthValidator.ValidateAsync(query);
+        if (!validation.IsValid) return ToValidationProblem(validation);
+
+        return HandleResult(await _service.GetSummaryAsync(CurrentUserId, familyId, query.Year!.Value, query.Month!.Value));
     }
 
     [HttpGet("{expenseId:guid}")]
