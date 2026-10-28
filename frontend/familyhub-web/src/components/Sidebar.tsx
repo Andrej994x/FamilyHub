@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { navItems } from './navigation';
+import { visibleNavItems } from './navigation';
+import { useFamily } from '../hooks/useFamily';
 
 export function Sidebar() {
   const { t } = useTranslation();
+  const { role } = useFamily();
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-gray-200 bg-white md:flex">
@@ -15,7 +17,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
+        {visibleNavItems(role).map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

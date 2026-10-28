@@ -8,6 +8,16 @@ export function isOwner(role: number | null): boolean {
   return role === FamilyRole.Owner;
 }
 
+/** Family Expenses is for every member except children (the API also returns 403 for them). */
+export function canAccessExpenses(role: number | null): boolean {
+  return role !== null && role !== FamilyRole.Child;
+}
+
+/** Owners and parents can change any expense; other members only the ones they created. */
+export function canEditExpense(role: number | null, createdByUserId: string, userId: string | undefined): boolean {
+  return canManageFamily(role) || (canAccessExpenses(role) && createdByUserId === userId);
+}
+
 export function roleLabelKey(role: number): string {
   switch (role) {
     case FamilyRole.Owner:

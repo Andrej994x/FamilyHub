@@ -11,6 +11,7 @@
     "family": "Family",
     "pickups": "Pickups",
     "vault": "Family Vault",
+    "expenses": "Expenses",
     "settings": "Settings",
     "more": "More"
   },
@@ -521,6 +522,96 @@
       "deleteFailed": "Could not delete the task."
     }
   },
+  "expenses": {
+    "add": "Add expense",
+    "empty": "No expenses this month.",
+    "emptyFiltered": "No expenses match these filters.",
+    "deleteConfirm": "Delete this expense?",
+    "paidBy": "Paid by {{name}}",
+    "formerMember": "Former member",
+    "archived": "Archived",
+    "month": {
+      "previous": "Previous month",
+      "next": "Next month"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "history": "History"
+    },
+    "summary": {
+      "title": "Monthly summary",
+      "spent": "Spent",
+      "budget": "Budget",
+      "remaining": "Remaining",
+      "overBudget": "Over budget by",
+      "noBudget": "No monthly budget is set for this month.",
+      "usage": "{{percent}}% of the budget used",
+      "expenseCount_one": "{{count}} expense",
+      "expenseCount_other": "{{count}} expenses"
+    },
+    "byCategory": {
+      "title": "Spending by category",
+      "empty": "No spending this month yet.",
+      "ofBudget": "of {{budget}}"
+    },
+    "recent": {
+      "title": "Recent expenses",
+      "viewAll": "View all",
+      "empty": "No expenses this month yet."
+    },
+    "history": {
+      "total_one": "{{count}} expense · {{amount}} total",
+      "total_other": "{{count}} expenses · {{amount}} total"
+    },
+    "filters": {
+      "category": "Category",
+      "payer": "Paid by",
+      "allCategories": "All categories",
+      "allPayers": "Everyone",
+      "clear": "Clear filters",
+      "archivedOption": "{{name}} (archived)"
+    },
+    "table": {
+      "date": "Date",
+      "category": "Category",
+      "paidBy": "Paid by",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "addTitle": "Add expense",
+      "editTitle": "Edit expense",
+      "amount": "Amount (MKD)",
+      "category": "Category",
+      "chooseCategory": "Choose a category",
+      "date": "Date",
+      "paidBy": "Paid by",
+      "description": "Description",
+      "submit": "Save"
+    },
+    "validation": {
+      "amountInvalid": "Enter an amount greater than 0 with at most two decimals, e.g. 1500 or 1500.50.",
+      "amountTooLarge": "The amount can be at most 10,000,000 MKD.",
+      "dateInFuture": "The date can't be in the future.",
+      "required": "This field is required."
+    },
+    "errors": {
+      "loadFailed": "Could not load expenses.",
+      "saveFailed": "Could not save the expense.",
+      "deleteFailed": "Could not delete the expense."
+    },
+    "defaultCategories": {
+      "foodGroceries": "Food & Groceries",
+      "billsUtilities": "Bills & Utilities",
+      "transport": "Transport",
+      "kidsEducation": "Kids & Education",
+      "health": "Health",
+      "shopping": "Shopping",
+      "entertainment": "Entertainment",
+      "home": "Home",
+      "other": "Other"
+    }
+  },
   "dashboard": {
     "greeting": "Hello, {{name}}",
     "loadError": "Could not load your dashboard.",
@@ -529,7 +620,8 @@
       "addEvent": "Add event",
       "addTask": "Add task",
       "addShopping": "Add shopping item",
-      "addPickup": "Add pickup"
+      "addPickup": "Add pickup",
+      "addExpense": "Add expense"
     },
     "stats": {
       "notifications": "Unread notifications",
@@ -590,6 +682,7 @@
     "calendar": { "subtitle": "Events, appointments and reminders." },
     "tasks": { "subtitle": "Shared to-dos for the whole family." },
     "shopping": { "subtitle": "Shared shopping lists." },
-    "pickups": { "subtitle": "Who picks up the kids, and when." }
+    "pickups": { "subtitle": "Who picks up the kids, and when." },
+    "expenses": { "subtitle": "Shared household spending, month by month." }
   }
 }

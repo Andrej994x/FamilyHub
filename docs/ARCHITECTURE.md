@@ -162,7 +162,7 @@ Roles (`Models/Enums/FamilyRole.cs`): `Owner`, `Parent`, `Member`, `Child`. A us
 - The frontend keeps a pending token in `sessionStorage` (`utils/pendingInvitation.ts`) across login/registration.
 - This token behavior is a known security risk; see [§12](#12-known-security-risks-separate-s3-review-required).
 
-The frontend hides UI using `src/utils/roles.ts`. This is cosmetic only.
+The frontend hides UI using `src/utils/roles.ts` (including navigation items with a `visible(role)` rule in `components/navigation.tsx`). This is cosmetic only.
 
 ## 6. Frontend (`frontend/familyhub-web/src`)
 
@@ -181,6 +181,7 @@ The frontend hides UI using `src/utils/roles.ts`. This is cosmetic only.
   1. `/invitations/accept` is reachable whether or not you're signed in.
   2. `PublicRoute` (login, register) redirects users who are already signed in.
   3. `ProtectedRoute` → `FamilyGate` (provides family context) → `RequireFamily` (no family redirects to `/onboarding`) → `AppLayout`.
+  4. `/expenses` is also wrapped in `RequireExpensesAccess`, which sends children to `/dashboard`.
 - **API base URL** (`utils/constants.ts`):
   - `VITE_API_BASE_URL` if set;
   - otherwise on port 5173, the same host on port 5271;

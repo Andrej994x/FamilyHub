@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FamilyRole } from '../types';
-import { canManageFamily, invitationStatusKey, isOwner, roleLabelKey } from './roles';
+import { canAccessExpenses, canEditExpense, canManageFamily, invitationStatusKey, isOwner, roleLabelKey } from './roles';
 
 describe('role helpers', () => {
   it('lets only owners and parents manage the family', () => {
@@ -15,6 +15,23 @@ describe('role helpers', () => {
     expect(isOwner(FamilyRole.Owner)).toBe(true);
     expect(isOwner(FamilyRole.Parent)).toBe(false);
     expect(isOwner(null)).toBe(false);
+  });
+
+  it('gives every member except children access to expenses', () => {
+    expect(canAccessExpenses(FamilyRole.Owner)).toBe(true);
+    expect(canAccessExpenses(FamilyRole.Parent)).toBe(true);
+    expect(canAccessExpenses(FamilyRole.Member)).toBe(true);
+    expect(canAccessExpenses(FamilyRole.Child)).toBe(false);
+    expect(canAccessExpenses(null)).toBe(false);
+  });
+
+  it('lets owners and parents edit any expense and members only their own', () => {
+    expect(canEditExpense(FamilyRole.Owner, 'someone', 'me')).toBe(true);
+    expect(canEditExpense(FamilyRole.Parent, 'someone', 'me')).toBe(true);
+    expect(canEditExpense(FamilyRole.Member, 'me', 'me')).toBe(true);
+    expect(canEditExpense(FamilyRole.Member, 'someone', 'me')).toBe(false);
+    expect(canEditExpense(FamilyRole.Member, 'me', undefined)).toBe(false);
+    expect(canEditExpense(FamilyRole.Child, 'me', 'me')).toBe(false);
   });
 
   it('keeps role values in sync with the backend FamilyRole enum order', () => {

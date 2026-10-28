@@ -6,7 +6,7 @@ FamilyHub has three automated suites. All three run in CI on every pull request 
 |---|---|---|---|---|
 | Backend unit tests | `backend/FamilyHub.Api.UnitTests` | xUnit v3 | .NET 8 SDK only | 155 |
 | API integration tests | `backend/FamilyHub.Api.IntegrationTests` | xUnit v3 + `WebApplicationFactory` + Testcontainers | .NET 8 SDK, **Docker** (Linux containers) | 127 (31 need no Docker) |
-| Frontend tests | `frontend/familyhub-web/src/**/*.test.ts(x)` | Vitest + React Testing Library on jsdom | Node 22.13+ | 43 |
+| Frontend tests | `frontend/familyhub-web/src/**/*.test.ts(x)` | Vitest + React Testing Library on jsdom | Node 22.13+ | 105 |
 
 Counts are test cases as reported by the runners (each `[Theory]`/`it.each` row counts once).
 
@@ -118,7 +118,11 @@ frontend/familyhub-web/
   - **Macedonian** rendering and validation messages.
 - `components/LanguageSwitcher`: switches to `mk` and persists it to `familyhub_language`.
 - `routes/ProtectedRoute`: loader, redirect to `/login`, and the outlet.
-- Utilities: `apiError`, `roles` (including enum parity with the backend), `vaultStatus` (fixed clock), `pendingInvitation`.
+- Utilities: `apiError`, `roles` (including enum parity with the backend and the expense access/edit rules), `vaultStatus` (fixed clock), `pendingInvitation`, `money` (MKD formatting in en/mk, amount parsing with `.` or `,`), `month` (month arithmetic, local calendar dates), `expenseCategories` (translated default categories, enum parity).
+- Family Expenses UI:
+  - navigation: Expenses in the sidebar and under More on mobile, hidden from children, as is the dashboard's Add expense quick action; `RequireExpensesAccess` sends children to the dashboard;
+  - `ExpenseDialog`: validation (amount, future date, required fields), the create/update payload, archived categories and former payers kept when editing, Macedonian text, server errors;
+  - `pages/Expenses` (mocked `expenseService`): month totals, budget, remaining, usage and categories in MKD; no-budget, empty and over-budget states; Members edit only their own expenses; month switching (no future months); history filters; delete; the `?add=1` link; load errors, with another month's summary or history never shown while a month loads or after it fails; Macedonian rendering.
 - HTTP is mocked at boundaries only: the Axios **adapter** (for `client.ts`) or the `authService` module (for the context). Expected UI strings are read from `locales/en|mk/translation.json`, not hard-coded.
 
 ## Integration tests and database isolation
@@ -169,7 +173,7 @@ If Docker is not available, the fixture fails with a "Docker is required" messag
   - push subscription endpoints;
   - the reminder engine.
 - **Unit tests use EF Core InMemory**, which enforces no relational constraints and doesn't support `ExecuteUpdate`/`ExecuteDelete`. Those paths are covered only by the SQL Server integration tests.
-- **Frontend coverage is limited.** It covers auth, routing guards, the API client, localization switching and utilities. Pages such as Tasks, Calendar, Shopping and Vault have no component tests yet.
+- **Frontend coverage is limited.** It covers auth, routing guards, the API client, localization switching and utilities. Pages such as Tasks, Calendar, Shopping and Vault have no component tests yet (Expenses does).
 - **No coverage reporting or thresholds.**
 - **Known defect found while writing tests** (not fixed in Phase 4; production code unchanged):
   - `UpdateReminderPreferenceRequestValidator` throws `NullReferenceException` when `ReminderOffsetsDays` is `null`. Its `Must(o => o.Length …)` rules still run after `NotNull()` fails, because FluentValidation's default cascade mode is `Continue`.

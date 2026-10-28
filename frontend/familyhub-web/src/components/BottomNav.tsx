@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { navItems } from './navigation';
+import { visibleNavItems, type NavItem } from './navigation';
+import { useFamily } from '../hooks/useFamily';
 import { MoreSheet } from './MoreSheet';
 
 // The bottom bar shows the daily-activity destinations; less-frequent ones live in "More".
 const PRIMARY_PATHS = ['/dashboard', '/calendar', '/tasks', '/shopping', '/pickups'];
-
-const primaryItems = PRIMARY_PATHS.map((path) => navItems.find((i) => i.path === path)).filter(
-  (i): i is (typeof navItems)[number] => Boolean(i),
-);
-const overflowItems = navItems.filter((i) => !PRIMARY_PATHS.includes(i.path));
 
 const cellClass = 'flex flex-1 flex-col items-center justify-center gap-1 py-1.5';
 
 export function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { role } = useFamily();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  const items = visibleNavItems(role);
+  const primaryItems = PRIMARY_PATHS.map((path) => items.find((i) => i.path === path)).filter(
+    (i): i is NavItem => Boolean(i),
+  );
+  const overflowItems = items.filter((i) => !PRIMARY_PATHS.includes(i.path));
 
   const moreActive = overflowItems.some((i) => location.pathname.startsWith(i.path));
 
